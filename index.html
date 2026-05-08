@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SMT Platform — تسجيل الدخول</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=IBM+Plex+Mono&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f2ec;--surface:#faf8f4;--surface2:#f0ece3;
+  --border:#d8d0c0;--text:#1a1714;--text2:#5a5248;--muted:#9a9188;--ink:#2c2420;
+  --accent:#1a4a8a;--accent2:#2563c0;--accent-bg:#e8f0fb;
+  --green:#1a6b3a;--red:#8b1a1a;--red-bg:#fdf2f2;
+  --radius:10px;--radius-sm:6px;
+  --font:'IBM Plex Sans Arabic',sans-serif;
+  --serif:'Amiri',serif;
+  --shadow-lg:0 8px 40px rgba(26,20,14,.18);
+}
+html,body{height:100%}
+body{font-family:var(--font);background:var(--bg);color:var(--text);display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;position:relative;overflow:hidden}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(26,74,138,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(26,74,138,.04) 1px,transparent 1px);background-size:36px 36px;pointer-events:none}
+.glow-tl{position:fixed;top:-150px;right:-100px;width:500px;height:500px;background:radial-gradient(ellipse,rgba(26,74,138,.08),transparent 70%);pointer-events:none}
+.glow-br{position:fixed;bottom:-150px;left:-100px;width:500px;height:500px;background:radial-gradient(ellipse,rgba(184,134,11,.07),transparent 70%);pointer-events:none}
+.wrap{width:100%;max-width:410px;animation:up .5s cubic-bezier(.22,1,.36,1);position:relative;z-index:1}
+@keyframes up{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:none}}
+.logo-area{text-align:center;margin-bottom:28px}
+.emblem{display:inline-flex;align-items:center;justify-content:center;width:68px;height:68px;background:linear-gradient(145deg,var(--accent),#0f3070);border-radius:14px;margin-bottom:14px;box-shadow:0 4px 20px rgba(26,74,138,.32),inset 0 1px 0 rgba(255,255,255,.18);font-size:34px;position:relative}
+.emblem::after{content:'';position:absolute;inset:3px;border-radius:11px;border:1px solid rgba(255,255,255,.18)}
+.logo-ar{font-family:var(--serif);font-size:26px;font-weight:700;color:var(--accent);display:block;letter-spacing:.01em}
+.logo-en{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.18em;display:block;margin-top:4px;text-transform:uppercase}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:30px 28px;box-shadow:var(--shadow-lg);position:relative;overflow:hidden}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--accent) 60%,#b8860b)}
+.card-title{font-size:17px;font-weight:700;color:var(--ink);margin-bottom:4px}
+.card-sub{font-size:13px;color:var(--text2);margin-bottom:22px}
+.role-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px}
+.role-btn{display:flex;flex-direction:column;align-items:center;gap:5px;padding:11px 10px;background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;font-family:var(--font);font-size:13px;font-weight:600;color:var(--text2);transition:all .18s}
+.role-btn .ri{font-size:22px}
+.role-btn:hover{border-color:var(--accent);background:#eef3fb;color:var(--accent)}
+.role-btn.active{border-color:var(--accent);background:var(--accent-bg);color:var(--accent);box-shadow:0 0 0 3px rgba(26,74,138,.1)}
+.form-group{margin-bottom:15px}
+.form-label{display:block;font-size:11px;font-weight:600;color:var(--text2);margin-bottom:6px;letter-spacing:.04em;text-transform:uppercase}
+.form-input{width:100%;background:var(--bg);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:10px 13px;color:var(--text);font-family:var(--font);font-size:14px;outline:none;transition:border-color .18s,box-shadow .18s}
+.form-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(26,74,138,.1);background:var(--surface)}
+.form-input::placeholder{color:var(--muted)}
+.error-box{background:var(--red-bg);border:1.5px solid #ecc;border-radius:var(--radius-sm);padding:10px 13px;font-size:13px;color:var(--red);margin-bottom:14px;display:none;align-items:center;gap:8px}
+.error-box.show{display:flex}
+.btn-login{width:100%;padding:12px;background:var(--accent);border:none;border-radius:var(--radius-sm);color:#fff;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer;transition:background .18s,transform .15s,box-shadow .18s;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 2px 8px rgba(26,74,138,.28);letter-spacing:.02em;margin-top:4px}
+.btn-login:hover{background:var(--accent2);box-shadow:0 4px 16px rgba(26,74,138,.35);transform:translateY(-1px)}
+.btn-login:active{transform:none}
+.btn-login:disabled{opacity:.6;cursor:not-allowed;transform:none}
+.btn-spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.footer{text-align:center;margin-top:18px;font-size:11px;color:var(--muted);letter-spacing:.03em}
+</style>
+</head>
+<body>
+<div class="glow-tl"></div>
+<div class="glow-br"></div>
+<div class="wrap">
+  <div class="logo-area">
+    <div class="emblem">🎓</div>
+    <span class="logo-ar">منصة SMT التعليمية</span>
+    <span class="logo-en">SMT Educational Platform</span>
+  </div>
+  <div class="card">
+    <div class="card-title">تسجيل الدخول</div>
+    <div class="card-sub">اختر نوع حسابك ثم أدخل بيانات الدخول</div>
+    <div class="role-grid">
+      <button class="role-btn active" data-role="student"><span class="ri">👨‍🎓</span>طالب</button>
+      <button class="role-btn" data-role="admin"><span class="ri">👨‍🏫</span>مدرس</button>
+    </div>
+    <div class="error-box" id="error-box"><span>⚠️</span><span id="error-msg"></span></div>
+    <div class="form-group">
+      <label class="form-label">البريد الإلكتروني</label>
+      <input type="email" id="login-email" class="form-input" placeholder="example@school.com" autocomplete="email">
+    </div>
+    <div class="form-group">
+      <label class="form-label">كلمة المرور</label>
+      <input type="password" id="login-pass" class="form-input" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="btn-login" id="login-btn">
+      <span id="btn-text">دخول إلى المنصة</span>
+    </button>
+  </div>
+  <div class="footer">منصة SMT التعليمية &copy; 2025 — جميع الحقوق محفوظة</div>
+</div>
+
+<script type="module">
+import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import{getAuth,signInWithEmailAndPassword,onAuthStateChanged}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import{getFirestore,doc,getDoc}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+// ════════════════════════════════════════
+//  🔥 FIREBASE CONFIG — ضع قيمك هنا
+// ════════════════════════════════════════
+const firebaseConfig = {
+  apiKey:            "AIzaSyDaqELq9wH5ewLLbO7KE0du04uJmd_ndl4",
+  authDomain:        "edu-plateform-mwl.firebaseapp.com",
+  projectId:         "edu-plateform-mwl",
+  storageBucket:     "edu-plateform-mwl.firebasestorage.app",
+  messagingSenderId: "484666536360",
+  appId:             "1:484666536360:web:aae1837e5a749a4c53ed9d",
+  measurementId:     "G-2GB1SGD06E"
+};
+// ════════════════════════════════════════
+
+const app  = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db   = getFirestore(app);
+
+// إذا كان مسجل دخول بالفعل، اعمل redirect مباشرة
+onAuthStateChanged(auth, async user => {
+  if (!user) return;
+  try {
+    const snap = await getDoc(doc(db, 'users', user.uid));
+    if (snap.exists()) redirect(snap.data().role);
+  } catch {}
+});
+
+function redirect(role) {
+  window.location.href = role === 'admin' ? 'admin.html' : 'student.html';
+}
+
+let selectedRole = 'student';
+
+// Wire role buttons
+document.querySelectorAll('.role-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    selectedRole = btn.dataset.role;
+    document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    hideError();
+  });
+});
+
+// Wire login button
+document.getElementById('login-btn').addEventListener('click', doLogin);
+
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-pass').value;
+  if (!email || !pass) { showError('أدخل البريد الإلكتروني وكلمة المرور'); return; }
+  setLoading(true); hideError();
+  try {
+    const cred = await signInWithEmailAndPassword(auth, email, pass);
+    const snap = await getDoc(doc(db, 'users', cred.user.uid));
+    if (!snap.exists()) { showError('الحساب غير موجود في النظام'); setLoading(false); return; }
+    const data = snap.data();
+    if (data.role !== selectedRole) {
+      showError(selectedRole === 'admin' ? 'هذا الحساب طالب — اختر طالب' : 'هذا الحساب مدرس — اختر مدرس');
+      setLoading(false); return;
+    }
+    if (data.role === 'student' && data.isActive === false) {
+      showError('حسابك موقوف — تواصل مع المدرس'); setLoading(false); return;
+    }
+    redirect(data.role);
+  } catch(e) {
+    const msgs = {
+      'auth/user-not-found':     'البريد غير مسجّل',
+      'auth/wrong-password':     'كلمة المرور خاطئة',
+      'auth/invalid-email':      'البريد غير صالح',
+      'auth/too-many-requests':  'تجاوزت المحاولات — انتظر قليلاً',
+      'auth/invalid-credential': 'البريد أو كلمة المرور غير صحيحة',
+    };
+    showError(msgs[e.code] || 'خطأ غير متوقع — حاول مرة أخرى');
+    setLoading(false);
+  }
+};
+
+function setLoading(v) {
+  const btn = document.getElementById('login-btn');
+  btn.disabled = v;
+  document.getElementById('btn-text').textContent = v ? 'جار التحقق...' : 'دخول إلى المنصة';
+  const sp = btn.querySelector('.btn-spinner');
+  if (v && !sp) { const s = document.createElement('div'); s.className = 'btn-spinner'; btn.prepend(s); }
+  if (!v) btn.querySelector('.btn-spinner')?.remove();
+}
+function showError(msg) { document.getElementById('error-msg').textContent = msg; document.getElementById('error-box').classList.add('show'); }
+function hideError()    { document.getElementById('error-box').classList.remove('show'); }
+
+document.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+</script>
+</body>
+</html>

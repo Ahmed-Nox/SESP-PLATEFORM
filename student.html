@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SMT — بوابة الطالب</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=IBM+Plex+Mono&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f2ec;--bg2:#ede9e0;--surface:#faf8f4;--surface2:#f0ece3;
+  --border:#d8d0c0;--border2:#c8bfac;
+  --text:#1a1714;--text2:#5a5248;--muted:#9a9188;--ink:#2c2420;
+  --accent:#1a4a8a;--accent2:#2563c0;--accent-bg:#e8f0fb;
+  --gold:#b8860b;--gold-bg:#fdf6e3;
+  --green:#1a6b3a;--green-bg:#e8f5ee;
+  --red:#8b1a1a;--red-bg:#fdf2f2;
+  --yellow:#92660a;--yellow-bg:#fdf6e3;
+  --purple:#5b21b6;--purple-bg:#f0ebff;
+  --cyan:#0e6b7a;--cyan-bg:#e8f5f8;
+  --sidebar:230px;--topbar:58px;
+  --radius:10px;--radius-sm:6px;
+  --font:'IBM Plex Sans Arabic',sans-serif;
+  --serif:'Amiri',serif;
+  --mono:'IBM Plex Mono',monospace;
+  --shadow:0 1px 6px rgba(26,20,14,.1);
+  --shadow-md:0 4px 20px rgba(26,20,14,.12);
+}
+html,body{height:100%;overflow:hidden}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px;line-height:1.55}
+.layout{display:flex;height:100vh;overflow:hidden}
+
+/* SIDEBAR */
+.sidebar{width:var(--sidebar);background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto;overflow-x:hidden}
+.sidebar-logo{display:flex;align-items:center;gap:11px;padding:17px 14px;border-bottom:1px solid var(--border)}
+.logo-emblem-sm{width:34px;height:34px;background:linear-gradient(145deg,var(--green),#0f5a2a);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;box-shadow:0 2px 8px rgba(26,107,58,.25)}
+.logo-text{font-family:var(--serif);font-size:14px;font-weight:700;color:var(--green)}
+.logo-sub{font-size:10px;color:var(--muted);letter-spacing:.03em}
+.nav{padding:8px 6px;flex:1}
+.nav-section{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);padding:16px 10px 5px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:8px 11px;border-radius:var(--radius-sm);cursor:pointer;color:var(--text2);font-size:13px;font-weight:500;text-decoration:none;transition:all .15s;user-select:none;border:1px solid transparent}
+.nav-item:hover{background:var(--surface2);color:var(--text);border-color:var(--border)}
+.nav-item.active{background:var(--green-bg);color:var(--green);border-color:rgba(26,107,58,.2);font-weight:600}
+.nav-icon{font-size:15px;width:20px;text-align:center;flex-shrink:0}
+.nav-badge{margin-right:auto;background:var(--border2);color:var(--text2);font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;min-width:18px;text-align:center;font-family:var(--mono)}
+.nav-badge.red{background:var(--red-bg);color:var(--red);border:1px solid #ecc}
+.sidebar-bottom{padding:12px 14px 14px;border-top:1px solid var(--border)}
+.user-mini{display:flex;align-items:center;gap:10px}
+.user-name{font-size:13px;font-weight:700;color:var(--ink)}
+.user-sid{font-size:10px;color:var(--cyan);font-family:var(--mono);letter-spacing:.04em}
+
+/* MAIN */
+.main-content{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:var(--topbar);background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 22px;gap:14px;flex-shrink:0}
+.page-title{font-size:16px;font-weight:700;color:var(--ink)}
+.page-sub{font-size:11px;color:var(--muted)}
+.content-area{flex:1;overflow-y:auto;padding:22px}
+.content-area>div:not(.hidden){animation:fadeIn .2s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:13px 18px;border-bottom:1px solid var(--border);background:var(--surface2)}
+.card-title{font-size:13px;font-weight:700;color:var(--ink)}
+.card-body{padding:18px}
+.mb-20{margin-bottom:20px}
+.mt-16{margin-top:16px}
+
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px}
+.stats-grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;text-align:center;box-shadow:var(--shadow);position:relative;overflow:hidden}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.stat-card.c-blue::before{background:var(--accent)}
+.stat-card.c-green::before{background:var(--green)}
+.stat-card.c-yellow::before{background:var(--gold)}
+.stat-card.c-red::before{background:var(--red)}
+.stat-card.c-purple::before{background:var(--purple)}
+.stat-card.c-cyan::before{background:var(--cyan)}
+.stat-icon{font-size:22px;display:block;margin-bottom:7px}
+.stat-num{font-size:26px;font-weight:700;font-family:var(--mono);color:var(--ink)}
+.stat-label{font-size:11px;color:var(--text2);margin-top:3px}
+
+/* TABLES */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th,td{padding:10px 15px;text-align:right}
+th{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);border-bottom:1px solid var(--border);background:var(--surface2)}
+tr{border-bottom:1px solid var(--border);transition:background .12s}
+tr:last-child{border-bottom:none}
+tbody tr:hover{background:var(--surface2)}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:var(--radius-sm);border:1px solid transparent;cursor:pointer;font-family:var(--font);font-size:13px;font-weight:600;text-decoration:none;transition:all .15s;white-space:nowrap}
+.btn-primary{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:0 1px 4px rgba(26,74,138,.25)}
+.btn-primary:hover{background:var(--accent2)}
+.btn-ghost{background:var(--surface2);color:var(--text2);border-color:var(--border)}
+.btn-ghost:hover{background:var(--bg2);color:var(--text);border-color:var(--border2)}
+.btn-success{background:var(--green-bg);color:var(--green);border-color:#b8ddc8}
+.btn-success:hover{background:#d8eee2}
+.btn-sm{padding:4px 10px;font-size:12px}
+.btn-full{width:100%;justify-content:center}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+
+/* FORMS */
+.form-group{margin-bottom:14px}
+.form-label{display:block;font-size:11px;font-weight:600;color:var(--text2);margin-bottom:6px;letter-spacing:.04em;text-transform:uppercase}
+.form-input{width:100%;background:var(--bg);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:9px 12px;color:var(--text);font-family:var(--font);font-size:13px;outline:none;transition:border-color .15s,box-shadow .15s}
+.form-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(26,74,138,.1)}
+.form-input::placeholder{color:var(--muted)}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;letter-spacing:.02em}
+.badge-green{background:var(--green-bg);color:var(--green);border:1px solid #b8ddc8}
+.badge-red{background:var(--red-bg);color:var(--red);border:1px solid #ecc}
+.badge-yellow{background:var(--yellow-bg);color:var(--yellow);border:1px solid #e0c870}
+.badge-blue{background:var(--accent-bg);color:var(--accent);border:1px solid #b8d0f0}
+.badge-purple{background:var(--purple-bg);color:var(--purple);border:1px solid #c8b0f0}
+.badge-cyan{background:var(--cyan-bg);color:var(--cyan);border:1px solid #a8d8e0}
+.badge-muted{background:var(--surface2);color:var(--muted);border:1px solid var(--border)}
+
+/* MODALS */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(26,20,14,.45);backdrop-filter:blur(3px);z-index:1000;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.open{display:flex;animation:fadeIn .2s ease}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-md)}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border);background:var(--surface2)}
+.modal-title{font-size:14px;font-weight:700;color:var(--ink)}
+.modal-close{background:none;border:none;cursor:pointer;color:var(--muted);font-size:16px;padding:2px 6px;border-radius:4px}
+.modal-close:hover{color:var(--text);background:var(--border)}
+.modal-body{padding:18px}
+
+/* TOAST */
+.toast-container{position:fixed;bottom:22px;left:22px;display:flex;flex-direction:column;gap:8px;z-index:9999}
+.toast{display:flex;align-items:center;gap:10px;padding:11px 16px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;box-shadow:var(--shadow-md);animation:up .25s ease}
+@keyframes up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.toast.success{background:var(--green-bg);border:1px solid #b8ddc8;color:var(--green)}
+.toast.error{background:var(--red-bg);border:1px solid #ecc;color:var(--red)}
+.toast.info{background:var(--accent-bg);border:1px solid #b8d0f0;color:var(--accent)}
+.toast.warning{background:var(--yellow-bg);border:1px solid #e0c870;color:var(--yellow)}
+
+/* SPINNER */
+.spinner{width:22px;height:22px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* UTILS */
+.hidden{display:none!important}
+.text-center{text-align:center}
+.text-muted{color:var(--muted)}
+.text-mono{font-family:var(--mono)}
+.divider{border:none;border-top:1px solid var(--border);margin:14px 0}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.empty-state{text-align:center;padding:32px 20px}
+.empty-state .icon{font-size:30px;margin-bottom:10px;opacity:.6}
+.empty-state .msg{font-size:13px;color:var(--muted)}
+
+/* CHART */
+.bar-group{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.bar-label-txt{font-size:11px;color:var(--text2);text-align:right;flex-shrink:0}
+.hbar{flex:1;height:18px;background:var(--surface2);border-radius:4px;overflow:hidden;border:1px solid var(--border)}
+.hbar-fill{height:100%;border-radius:3px;transition:width .7s ease;display:flex;align-items:center;justify-content:flex-end;padding-left:6px}
+.hbar-val{font-size:10px;font-weight:700;color:#fff;font-family:var(--mono)}
+
+/* TABS */
+.tabs-row{display:flex;border-bottom:1px solid var(--border);margin-bottom:14px}
+.tab-btn{background:none;border:none;border-bottom:2px solid transparent;padding:7px 13px;font-size:13px;font-weight:600;color:var(--text2);cursor:pointer;font-family:var(--font);transition:all .15s}
+.tab-btn:hover{color:var(--text)}
+.tab-btn.active{color:var(--green);border-bottom-color:var(--green)}
+
+/* ══ STUDENT-SPECIFIC ══ */
+/* Welcome Banner */
+.welcome-banner{background:linear-gradient(135deg,var(--green-bg),var(--cyan-bg));border:1px solid #b8ddc8;border-radius:var(--radius);padding:22px 26px;margin-bottom:22px;display:flex;align-items:center;gap:18px;position:relative;overflow:hidden}
+.welcome-banner::before{content:'';position:absolute;top:-60px;left:-60px;width:200px;height:200px;background:radial-gradient(circle,rgba(26,107,58,.08),transparent 70%)}
+.welcome-avatar{width:58px;height:58px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;color:#fff;flex-shrink:0;box-shadow:0 3px 12px rgba(0,0,0,.2)}
+.welcome-text h2{font-family:var(--serif);font-size:20px;font-weight:700;color:var(--ink)}
+.welcome-text p{font-size:12px;color:var(--text2);margin-top:4px}
+.welcome-right{margin-right:auto;text-align:left}
+.welcome-date{font-size:11px;color:var(--text2)}
+.sid-badge-lg{display:inline-flex;align-items:center;gap:5px;background:var(--cyan-bg);border:1px solid #a8d8e0;color:var(--cyan);font-family:var(--mono);font-size:12px;padding:3px 10px;border-radius:4px;font-weight:700;margin-top:6px}
+
+/* Ring */
+.ring-wrap{position:relative;display:inline-block}
+.ring-svg circle{fill:none;stroke-width:8}
+.ring-bg{stroke:var(--surface2)}
+.ring-fill{stroke-linecap:round;transform:rotate(-90deg);transform-origin:center;transition:stroke-dashoffset .9s ease}
+.ring-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
+.ring-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;box-shadow:var(--shadow)}
+.ring-title{font-size:12px;font-weight:600;color:var(--text2)}
+
+/* Grade Items */
+.grade-item{display:flex;align-items:center;gap:14px;padding:13px 18px;border-bottom:1px solid var(--border);transition:background .12s}
+.grade-item:last-child{border-bottom:none}
+.grade-item:hover{background:var(--surface2)}
+.grade-circle{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;font-family:var(--mono);flex-shrink:0;border:2px solid}
+.grade-info{flex:1}
+.grade-name{font-size:13px;font-weight:700;color:var(--ink)}
+.grade-meta{font-size:11px;color:var(--muted);margin-top:2px}
+
+/* Attendance Calendar */
+.att-calendar{padding:16px 18px}
+.att-month-nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.att-month-name{font-size:14px;font-weight:700;color:var(--ink)}
+.att-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.att-day-name{font-size:9px;color:var(--muted);text-align:center;padding:4px;font-weight:700;letter-spacing:.04em}
+.att-day{aspect-ratio:1;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;font-family:var(--mono)}
+.att-day.present{background:var(--green-bg);color:var(--green);border:1px solid #b8ddc8}
+.att-day.absent{background:var(--red-bg);color:var(--red);border:1px solid #ecc}
+.att-day.late{background:var(--yellow-bg);color:var(--yellow);border:1px solid #e0c870}
+.att-day.empty{background:transparent;color:transparent;pointer-events:none}
+.att-day.today{outline:2px solid var(--accent);outline-offset:1px}
+.att-day.no-record{background:var(--surface2);color:var(--muted)}
+.att-legend{display:flex;gap:14px;margin-top:12px;flex-wrap:wrap}
+.att-legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2)}
+.att-legend-dot{width:10px;height:10px;border-radius:3px}
+
+/* Task Items */
+.task-item{display:flex;align-items:flex-start;gap:12px;padding:14px 18px;border-bottom:1px solid var(--border)}
+.task-item:last-child{border-bottom:none}
+.task-icon{font-size:20px;flex-shrink:0;margin-top:2px}
+.task-info{flex:1}
+.task-title{font-size:13px;font-weight:700;color:var(--ink)}
+.task-desc{font-size:12px;color:var(--text2);margin-top:3px}
+.task-due{font-size:11px;margin-top:6px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+
+/* Notif */
+.snotif-item{display:flex;align-items:flex-start;gap:11px;padding:12px 18px;border-bottom:1px solid var(--border)}
+.snotif-item:last-child{border-bottom:none}
+.snotif-item.unread{background:rgba(26,74,138,.03)}
+.snotif-dot{width:7px;height:7px;border-radius:50%;margin-top:5px;flex-shrink:0}
+
+/* Progress */
+.perf-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:16px 18px}
+.perf-item{text-align:center}
+.perf-num{font-size:22px;font-weight:700;font-family:var(--mono)}
+.perf-lbl{font-size:11px;color:var(--text2);margin-top:3px}
+.trend-wrap{padding:10px 18px 6px}
+.trend-labels{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:6px}
+
+/* Lessons */
+.lesson-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px}
+.lesson-card-s{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);transition:border-color .2s,box-shadow .2s}
+.lesson-card-s:hover{border-color:var(--green);box-shadow:0 4px 16px rgba(26,107,58,.12)}
+.lesson-cover{height:120px;display:flex;align-items:center;justify-content:center;font-size:44px;background:var(--surface2);position:relative;border-bottom:1px solid var(--border)}
+.lesson-lock{position:absolute;inset:0;background:rgba(26,20,14,.35);display:flex;align-items:center;justify-content:center;font-size:28px}
+.lesson-body{padding:14px}
+.lesson-title-s{font-size:13px;font-weight:700;color:var(--ink);margin-bottom:6px}
+.lesson-meta-s{font-size:11px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.lesson-footer{display:flex;align-items:center;justify-content:space-between}
+
+/* Code input */
+.code-wrap{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px}
+.code-row{display:flex;gap:8px}
+.code-input{flex:1;background:var(--bg);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;color:var(--ink);font-family:var(--mono);font-size:20px;letter-spacing:.18em;text-align:center;text-transform:uppercase;outline:none;transition:border-color .15s}
+.code-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(26,74,138,.1)}
+
+/* Info / warn notes */
+.info-note{background:var(--accent-bg);border:1px solid #b8d0f0;border-radius:var(--radius-sm);padding:10px 13px;font-size:12px;color:var(--text2)}
+</style>
+</head>
+<body>
+<div class="layout">
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-emblem-sm">🎓</div>
+    <div><div class="logo-text">منصة SMT</div><div class="logo-sub">بوابة الطالب</div></div>
+  </div>
+  <nav class="nav">
+    <div class="nav-section">الرئيسية</div>
+    <a class="nav-item active" data-page="dashboard"     onclick="showPage('dashboard',this)"><span class="nav-icon">🏠</span>الرئيسية</a>
+    <a class="nav-item"        data-page="grades"        onclick="showPage('grades',this)"><span class="nav-icon">📝</span>درجاتي</a>
+    <a class="nav-item"        data-page="attendance"    onclick="showPage('attendance',this)"><span class="nav-icon">📅</span>حضوري</a>
+    <div class="nav-section">المهام</div>
+    <a class="nav-item" data-page="assignments"  onclick="showPage('assignments',this)"><span class="nav-icon">📚</span>الواجبات<span class="nav-badge red" id="nb-assign"></span></a>
+    <a class="nav-item" data-page="exams"        onclick="showPage('exams',this)"><span class="nav-icon">🧪</span>الامتحانات</a>
+    <a class="nav-item" data-page="lessons"      onclick="showPage('lessons',this)"><span class="nav-icon">🎬</span>الحصص</a>
+    <div class="nav-section">أخرى</div>
+    <a class="nav-item" data-page="notifications" onclick="showPage('notifications',this)"><span class="nav-icon">🔔</span>الإشعارات<span class="nav-badge red" id="nb-notif"></span></a>
+    <a class="nav-item" data-page="progress"      onclick="showPage('progress',this)"><span class="nav-icon">📈</span>تقدمي</a>
+    <a class="nav-item" data-page="settings"      onclick="showPage('settings',this)"><span class="nav-icon">⚙️</span>الإعدادات</a>
+  </nav>
+  <div class="sidebar-bottom">
+    <div class="user-mini">
+      <div style="width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;background:var(--green);flex-shrink:0" id="sb-avatar">ط</div>
+      <div><div class="user-name" id="sb-name">جار التحميل...</div><div class="user-sid" id="sb-sid">—</div></div>
+    </div>
+    <button class="btn btn-ghost btn-full" style="margin-top:10px" onclick="doLogout()">🚪 تسجيل الخروج</button>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<div class="main-content">
+  <header class="topbar">
+    <div><div class="page-title" id="topbar-title">الرئيسية</div><div class="page-sub" id="topbar-sub">بوابة الطالب</div></div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <button class="btn btn-ghost btn-sm" onclick="showPage('notifications',document.querySelector('[data-page=notifications]'))">🔔 <span id="bell-count"></span></button>
+    </div>
+  </header>
+
+  <div class="content-area">
+
+    <!-- DASHBOARD -->
+    <div id="page-dashboard">
+      <div class="welcome-banner">
+        <div class="welcome-avatar" id="dash-avatar" style="background:var(--green)">ط</div>
+        <div class="welcome-text">
+          <h2 id="dash-welcome">أهلاً!</h2>
+          <p id="dash-group">جار التحميل...</p>
+          <div class="sid-badge-lg" id="dash-sid">🆔 —</div>
+        </div>
+        <div class="welcome-right">
+          <div class="welcome-date" id="dash-date"></div>
+          <div style="font-size:12px;color:var(--gold);font-weight:600;margin-top:4px">🔥 واصل التميز</div>
+        </div>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card c-green"><span class="stat-icon">✅</span><div class="stat-num" id="ds-attend">—</div><div class="stat-label">معدل الحضور</div></div>
+        <div class="stat-card c-blue"><span class="stat-icon">📝</span><div class="stat-num" id="ds-avg">—</div><div class="stat-label">متوسط الدرجات</div></div>
+        <div class="stat-card c-yellow"><span class="stat-icon">📚</span><div class="stat-num" id="ds-pending">—</div><div class="stat-label">واجبات معلقة</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 290px;gap:18px;margin-bottom:20px">
+        <div class="card">
+          <div class="card-header"><span class="card-title">آخر الدرجات</span><button class="btn btn-ghost btn-sm" onclick="showPage('grades',document.querySelector('[data-page=grades]'))">عرض الكل</button></div>
+          <div id="dash-grades-list"><div class="empty-state"><div class="icon">📝</div><div class="msg">لا توجد درجات بعد</div></div></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div class="ring-card">
+            <div class="ring-wrap">
+              <svg width="86" height="86" viewBox="0 0 86 86" class="ring-svg">
+                <circle class="ring-bg"   cx="43" cy="43" r="36"/>
+                <circle class="ring-fill" id="ring-att" cx="43" cy="43" r="36" stroke="var(--green)" stroke-dasharray="226" stroke-dashoffset="226"/>
+              </svg>
+              <div class="ring-center">
+                <div style="font-size:17px;font-weight:700;font-family:var(--mono);color:var(--ink)" id="ring-att-txt">0%</div>
+                <div style="font-size:9px;color:var(--muted)">حضور</div>
+              </div>
+            </div>
+            <div class="ring-title">معدل الحضور</div>
+          </div>
+          <div class="card">
+            <div class="card-header" style="padding:11px 14px"><span class="card-title" style="font-size:12px">📅 امتحانات قادمة</span></div>
+            <div id="dash-upcoming"><div class="empty-state" style="padding:16px"><div class="msg" style="font-size:12px">لا يوجد</div></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">الواجبات المعلقة</span><button class="btn btn-ghost btn-sm" onclick="showPage('assignments',document.querySelector('[data-page=assignments]'))">عرض الكل</button></div>
+        <div id="dash-assignments"><div class="empty-state"><div class="icon">✅</div><div class="msg">لا توجد واجبات معلقة 🎉</div></div></div>
+      </div>
+    </div>
+
+    <!-- GRADES -->
+    <div id="page-grades" class="hidden">
+      <div class="card mb-20">
+        <div class="card-header"><span class="card-title">ملخص الأداء الأكاديمي</span></div>
+        <div class="perf-grid">
+          <div class="perf-item"><div class="perf-num" id="pg-avg"   style="color:var(--accent)">—</div><div class="perf-lbl">المتوسط العام</div></div>
+          <div class="perf-item"><div class="perf-num" id="pg-best"  style="color:var(--green)">—</div><div class="perf-lbl">أعلى درجة</div></div>
+          <div class="perf-item"><div class="perf-num" id="pg-count" style="color:var(--purple)">—</div><div class="perf-lbl">عدد الاختبارات</div></div>
+        </div>
+        <div class="trend-wrap">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:6px;font-weight:600;letter-spacing:.04em;text-transform:uppercase">منحنى الدرجات</div>
+          <svg viewBox="0 0 600 72" style="width:100%;height:72px" xmlns="http://www.w3.org/2000/svg">
+            <defs><linearGradient id="trendG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--accent)" stop-opacity=".15"/><stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/></linearGradient></defs>
+            <path id="trend-area" fill="url(#trendG)"/>
+            <path id="trend-line" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <div class="trend-labels" id="trend-labels"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">سجل الدرجات</span></div>
+        <div id="grades-list"><div class="empty-state"><div class="icon">📝</div><div class="msg">لا توجد درجات بعد</div></div></div>
+      </div>
+    </div>
+
+    <!-- ATTENDANCE -->
+    <div id="page-attendance" class="hidden">
+      <div class="stats-grid-4" style="margin-bottom:18px">
+        <div class="stat-card c-green"><span class="stat-icon">✅</span><div class="stat-num" id="att-present">—</div><div class="stat-label">حاضر</div></div>
+        <div class="stat-card c-yellow"><span class="stat-icon">⏰</span><div class="stat-num" id="att-late">—</div><div class="stat-label">متأخر</div></div>
+        <div class="stat-card c-red"><span class="stat-icon">❌</span><div class="stat-num" id="att-absent">—</div><div class="stat-label">غائب</div></div>
+        <div class="stat-card c-blue"><span class="stat-icon">📊</span><div class="stat-num" id="att-rate">—</div><div class="stat-label">المعدل</div></div>
+      </div>
+      <div class="card">
+        <div class="att-calendar">
+          <div class="att-month-nav">
+            <button class="btn btn-ghost btn-sm" onclick="changeMonth(-1)">→ السابق</button>
+            <span class="att-month-name" id="cal-month-label"></span>
+            <button class="btn btn-ghost btn-sm" onclick="changeMonth(1)">التالي ←</button>
+          </div>
+          <div class="att-grid" id="cal-header">
+            <div class="att-day-name">أحد</div><div class="att-day-name">إثن</div><div class="att-day-name">ثلث</div><div class="att-day-name">أرب</div><div class="att-day-name">خمس</div><div class="att-day-name">جمع</div><div class="att-day-name">سبت</div>
+          </div>
+          <div class="att-grid" id="cal-grid"></div>
+          <div class="att-legend">
+            <div class="att-legend-item"><div class="att-legend-dot" style="background:var(--green-bg);border:1px solid #b8ddc8"></div>حاضر</div>
+            <div class="att-legend-item"><div class="att-legend-dot" style="background:var(--yellow-bg);border:1px solid #e0c870"></div>متأخر</div>
+            <div class="att-legend-item"><div class="att-legend-dot" style="background:var(--red-bg);border:1px solid #ecc"></div>غائب</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ASSIGNMENTS -->
+    <div id="page-assignments" class="hidden">
+      <div class="tabs-row">
+        <button class="tab-btn active" onclick="filterAssign('all',this)">الكل</button>
+        <button class="tab-btn" onclick="filterAssign('pending',this)">⏳ معلق</button>
+        <button class="tab-btn" onclick="filterAssign('submitted',this)">✅ مسلّم</button>
+        <button class="tab-btn" onclick="filterAssign('overdue',this)">🔴 منتهي</button>
+      </div>
+      <div class="card"><div id="assign-list"><div class="empty-state"><div class="icon">📚</div><div class="msg">لا توجد واجبات</div></div></div></div>
+    </div>
+
+    <!-- EXAMS -->
+    <div id="page-exams" class="hidden">
+      <div class="card"><div class="table-wrap"><table>
+        <thead><tr><th>الامتحان</th><th>التاريخ</th><th>النوع</th><th>الدرجة</th><th>التقدير</th></tr></thead>
+        <tbody id="exams-tbody"><tr><td colspan="5"><div class="empty-state"><div class="icon">🧪</div><div class="msg">لا توجد امتحانات</div></div></td></tr></tbody>
+      </table></div></div>
+    </div>
+
+    <!-- LESSONS -->
+    <div id="page-lessons" class="hidden">
+      <div style="margin-bottom:14px" class="info-note">💡 الحصص المتاحة لمجموعتك. أدخل كود الدخول لمشاهدة أي حصة لأول مرة — بعدها تقدر تشوفها متى أردت.</div>
+      <div id="lessons-grid" class="lesson-grid"><div class="empty-state" style="grid-column:1/-1"><div class="icon">🎬</div><div class="msg">لا توجد حصص بعد</div></div></div>
+    </div>
+
+    <!-- NOTIFICATIONS -->
+    <div id="page-notifications" class="hidden">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:14px">
+        <button class="btn btn-ghost btn-sm" onclick="markAllRead()">✅ تحديد الكل كمقروء</button>
+      </div>
+      <div class="card"><div id="notif-list"><div class="empty-state"><div class="icon">🔕</div><div class="msg">لا توجد إشعارات</div></div></div></div>
+    </div>
+
+    <!-- PROGRESS -->
+    <div id="page-progress" class="hidden">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px">
+        <div class="card"><div class="card-header"><span class="card-title">🎯 نقاط القوة</span></div><div class="card-body" id="strength-list"><div class="empty-state"><div class="icon">💪</div><div class="msg">جار التحليل...</div></div></div></div>
+        <div class="card"><div class="card-header"><span class="card-title">📉 مجالات التطوير</span></div><div class="card-body" id="weakness-list"><div class="empty-state"><div class="icon">🎯</div><div class="msg">جار التحليل...</div></div></div></div>
+      </div>
+      <div class="card"><div class="card-header"><span class="card-title">📊 مقارنة بالمجموعة</span></div><div class="card-body" id="comparison-chart"><div class="empty-state"><div class="icon">📊</div><div class="msg">لا توجد بيانات كافية</div></div></div></div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div id="page-settings" class="hidden">
+      <div style="max-width:440px">
+        <div class="card mb-20">
+          <div class="card-header"><span class="card-title">معلوماتي</span></div>
+          <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;align-items:center;gap:14px;padding:12px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border)">
+              <div style="width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#fff;background:var(--green);flex-shrink:0" id="set-avatar">ط</div>
+              <div>
+                <div style="font-size:15px;font-weight:700;color:var(--ink)" id="set-name-disp">—</div>
+                <div style="font-size:12px;color:var(--cyan);font-family:var(--mono);margin-top:2px" id="set-sid-disp">—</div>
+                <div style="font-size:12px;color:var(--muted);margin-top:1px" id="set-info-disp">—</div>
+              </div>
+            </div>
+            <div class="form-group"><label class="form-label">الاسم</label><input type="text" id="set-name" class="form-input"></div>
+            <button class="btn btn-primary" onclick="saveProfile()">💾 حفظ</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">🔒 تغيير كلمة المرور</span></div>
+          <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
+            <div class="form-group"><label class="form-label">الجديدة</label><input type="password" id="set-pass" class="form-input" placeholder="••••••••"></div>
+            <div class="form-group"><label class="form-label">تأكيد</label><input type="password" id="set-pass2" class="form-input" placeholder="••••••••"></div>
+            <button class="btn btn-ghost" onclick="changePass()">تغيير كلمة المرور</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</div>
+
+<!-- Watch Modal -->
+<div class="modal-overlay" id="watch-modal">
+  <div class="modal" style="max-width:580px">
+    <div class="modal-header"><span class="modal-title" id="watch-title">🎬 مشاهدة الحصة</span><button class="modal-close" onclick="closeModal('watch-modal')">✕</button></div>
+    <div class="modal-body" id="watch-body"></div>
+  </div>
+</div>
+
+<!-- ═══ FIREBASE + LOGIC ═══ -->
+<script type="module">
+import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import{getAuth,signOut,onAuthStateChanged,updatePassword}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import{getFirestore,collection,doc,getDoc,getDocs,updateDoc,query,where,orderBy,limit,onSnapshot,serverTimestamp,writeBatch}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+// ════════════════════════════════════════
+//  🔥 FIREBASE CONFIG — ضع قيمك هنا
+// ════════════════════════════════════════
+const firebaseConfig = {
+  apiKey:            "AIzaSyDaqELq9wH5ewLLbO7KE0du04uJmd_ndl4",
+  authDomain:        "edu-plateform-mwl.firebaseapp.com",
+  projectId:         "edu-plateform-mwl",
+  storageBucket:     "edu-plateform-mwl.firebasestorage.app",
+  messagingSenderId: "484666536360",
+  appId:             "1:484666536360:web:aae1837e5a749a4c53ed9d",
+  measurementId:     "G-2GB1SGD06E"
+};
+// ════════════════════════════════════════
+const app=initializeApp(firebaseConfig);
+const auth=getAuth(app);
+const db=getFirestore(app);
+
+// ══ SERVICES ══
+const UserService={
+  async getUser(uid){const s=await getDoc(doc(db,'users',uid));return s.exists()?{uid:s.id,...s.data()}:null},
+  async updateUser(uid,data){await updateDoc(doc(db,'users',uid),{...data,updatedAt:serverTimestamp()})},
+};
+// FIXED: GroupService.getGroup now defined
+const GroupService={
+  async getGroup(id){const s=await getDoc(doc(db,'groups',id));return s.exists()?{id:s.id,...s.data()}:null},
+};
+const AttendanceService={
+  async getStudentAttendance(uid){const q=query(collection(db,'attendance'),where('studentId','==',uid),orderBy('dateStr','desc'));const s=await getDocs(q);return s.docs.map(d=>({id:d.id,...d.data()}))},
+  calcRate(records){if(!records.length)return{rate:0,present:0,late:0,absent:0,total:0};const p=records.filter(r=>r.status==='present').length,l=records.filter(r=>r.status==='late').length,a=records.filter(r=>r.status==='absent').length;return{rate:Math.round(((p+l*.5)/records.length)*100),present:p,late:l,absent:a,total:records.length}},
+};
+const GradeService={
+  async getStudentGrades(uid){const q=query(collection(db,'grades'),where('studentId','==',uid),orderBy('gradedAt','desc'));const s=await getDocs(q);return s.docs.map(d=>({id:d.id,...d.data()}))},
+  calcAverage(grades){if(!grades.length)return 0;return Math.round(grades.reduce((a,g)=>a+(g.score/g.maxScore)*100,0)/grades.length)},
+};
+const ExamService={
+  async getExams(groupId){const q=query(collection(db,'exams'),where('groupId','==',groupId),orderBy('date','desc'));const s=await getDocs(q);return s.docs.map(d=>({id:d.id,...d.data()}))},
+};
+const AssignmentService={
+  async getGroupAssignments(groupId){const q=query(collection(db,'assignments'),where('groupId','==',groupId),orderBy('dueDate','desc'));const s=await getDocs(q);return s.docs.map(d=>({id:d.id,...d.data()}))},
+  async markSubmitted(id,studentId){await updateDoc(doc(db,'assignments',id),{[`submissions.${studentId}`]:true})},
+};
+const NotifService={
+  async getUserNotifs(uid,lim=40){const q=query(collection(db,'notifications'),where('toUid','==',uid),orderBy('createdAt','desc'),limit(lim));const s=await getDocs(q);return s.docs.map(d=>({id:d.id,...d.data()}))},
+  async markRead(id){await updateDoc(doc(db,'notifications',id),{isRead:true})},
+  async markAllRead(uid){const q=query(collection(db,'notifications'),where('toUid','==',uid),where('isRead','==',false));const s=await getDocs(q);const b=writeBatch(db);s.docs.forEach(d=>b.update(d.ref,{isRead:true}));await b.commit()},
+  listenUserNotifs(uid,cb){const q=query(collection(db,'notifications'),where('toUid','==',uid),where('isRead','==',false),orderBy('createdAt','desc'));return onSnapshot(q,s=>cb(s.docs.map(d=>({id:d.id,...d.data()}))))},
+};
+const LessonService={
+  async getLessonsForGroup(groupId){const q=query(collection(db,'lessons'),where('groupId','==',groupId),orderBy('createdAt','desc'));const s=await getDocs(q);return s.docs.map(d=>({id:d.id,...d.data()}))},
+  hasAccess(lesson,uid){return(lesson.accessList||[]).includes(uid)},
+  async useCode(lessonId,studentId,code){
+    const snap=await getDoc(doc(db,'lessons',lessonId));if(!snap.exists())throw new Error('الحصة غير موجودة');
+    const lesson={id:snap.id,...snap.data()};
+    if(lesson.code!==code.toUpperCase().trim())throw new Error('الكود غير صحيح ❌');
+    if(lesson.codeUsed&&!this.hasAccess(lesson,studentId))throw new Error('الكود استُخدم بالفعل 🔒');
+    const list=lesson.accessList||[];
+    if(!list.includes(studentId))await updateDoc(doc(db,'lessons',lessonId),{codeUsed:true,accessList:[...list,studentId]});
+    return lesson;
+  },
+};
+const AnalyticsService={
+  async getGroupAnalytics(groupId){const s=await getDoc(doc(db,'analytics',groupId));return s.exists()?s.data():null},
+};
+
+// UTILS
+const Utils={
+  formatDate(ts,short=false){if(!ts)return'—';const d=ts.toDate?ts.toDate():new Date(ts);return short?d.toLocaleDateString('ar-EG',{day:'2-digit',month:'short'}):d.toLocaleDateString('ar-EG',{year:'numeric',month:'long',day:'numeric'})},
+  timeAgo(ts){if(!ts)return'';const d=ts.toDate?ts.toDate():new Date(ts);const s=Math.floor((Date.now()-d.getTime())/1000);if(s<60)return'الآن';if(s<3600)return`منذ ${Math.floor(s/60)} دقيقة`;if(s<86400)return`منذ ${Math.floor(s/3600)} ساعة`;return`منذ ${Math.floor(s/86400)} يوم`},
+  gradeColor(pct){if(pct>=85)return'var(--green)';if(pct>=65)return'var(--accent)';if(pct>=50)return'var(--gold)';return'var(--red)'},
+  gradeBadge(pct){if(pct>=85)return['ممتاز','badge-green'];if(pct>=75)return['جيد جداً','badge-blue'];if(pct>=65)return['جيد','badge-blue'];if(pct>=50)return['مقبول','badge-yellow'];return['ضعيف','badge-red']},
+  avatarBg(name=''){const c=['#1a4a8a','#1a6b3a','#8b1a1a','#5b21b6','#0e6b7a','#b8860b'];let h=0;for(const ch of name)h+=ch.charCodeAt(0);return c[h%c.length]},
+  toast(msg,type='info',dur=3500){
+    let cont=document.getElementById('toast-container');
+    if(!cont){cont=Object.assign(document.createElement('div'),{id:'toast-container',className:'toast-container'});document.body.appendChild(cont)}
+    const t=document.createElement('div');t.className=`toast ${type}`;
+    const icons={success:'✅',error:'❌',info:'ℹ️',warning:'⚠️'};
+    t.innerHTML=`<span>${icons[type]||''}</span><span>${msg}</span>`;
+    cont.appendChild(t);setTimeout(()=>t.remove(),dur);
+  },
+};
+
+window.openModal =id=>document.getElementById(id)?.classList.add('open');
+window.closeModal=id=>document.getElementById(id)?.classList.remove('open');
+document.querySelectorAll('.modal-overlay').forEach(el=>el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('open')}));
+
+// STATE
+let currentUser=null,myGroup=null,myGrades=[],myAttendance=[],myAssignments=[],myExams=[],examMap={},allAssignments=[],calYear=new Date().getFullYear(),calMonth=new Date().getMonth();
+
+window.doLogout=()=>signOut(auth).then(()=>window.location.href='index.html');
+
+// INIT
+onAuthStateChanged(auth,async user=>{
+  if(!user){window.location.href='index.html';return}
+  const snap=await getDoc(doc(db,'users',user.uid));
+  if(!snap.exists()){window.location.href='index.html';return}
+  if(snap.data().role==='admin'){window.location.href='admin.html';return}
+  currentUser={uid:user.uid,...snap.data()};
+  const firstName=(currentUser.name||'طالب').split(' ')[0];
+  document.getElementById('sb-name').textContent=currentUser.name||'طالب';
+  document.getElementById('sb-sid').textContent=currentUser.studentId||'—';
+  document.getElementById('sb-avatar').textContent=firstName[0];
+  document.getElementById('dash-avatar').textContent=firstName[0];
+  document.getElementById('dash-welcome').textContent=`أهلاً، ${firstName}!`;
+  document.getElementById('dash-sid').textContent=`🆔 ${currentUser.studentId||'—'}`;
+  document.getElementById('dash-date').textContent=new Date().toLocaleDateString('ar-EG',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  document.getElementById('set-name').value=currentUser.name||'';
+  document.getElementById('set-name-disp').textContent=currentUser.name||'—';
+  document.getElementById('set-sid-disp').textContent=currentUser.studentId||'—';
+  document.getElementById('set-info-disp').textContent=`${currentUser.email||''}${currentUser.phone?' · '+currentUser.phone:''}`;
+  document.getElementById('set-avatar').textContent=firstName[0];
+
+  // FIXED: GroupService.getGroup properly called
+  if(currentUser.groupId){
+    myGroup=await GroupService.getGroup(currentUser.groupId);
+    document.getElementById('dash-group').textContent=myGroup?`المجموعة: ${myGroup.name}`:'لا توجد مجموعة';
+  }else{
+    document.getElementById('dash-group').textContent='لم تُضف لمجموعة بعد';
+  }
+  listenNotifs();
+  await loadAllData();
+  renderDashboard();
+});
+
+async function loadAllData(){
+  const[grades,attendance,assignments,exams]=await Promise.all([
+    GradeService.getStudentGrades(currentUser.uid),
+    AttendanceService.getStudentAttendance(currentUser.uid),
+    currentUser.groupId?AssignmentService.getGroupAssignments(currentUser.groupId):Promise.resolve([]),
+    currentUser.groupId?ExamService.getExams(currentUser.groupId):Promise.resolve([]),
+  ]);
+  myGrades=grades;myAttendance=attendance;myAssignments=assignments;allAssignments=assignments;myExams=exams;
+  examMap={};exams.forEach(e=>{examMap[e.id]=e});
+}
+
+// NAV — FIXED: uses explicit btn param
+window.showPage=function(page,btn){
+  document.querySelectorAll('[id^="page-"]').forEach(el=>el.classList.add('hidden'));
+  document.getElementById(`page-${page}`)?.classList.remove('hidden');
+  document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  else document.querySelector(`[data-page="${page}"]`)?.classList.add('active');
+  const titles={dashboard:'الرئيسية',grades:'درجاتي',attendance:'سجل الحضور',assignments:'الواجبات',exams:'الامتحانات',lessons:'الحصص',notifications:'الإشعارات',progress:'تقدمي',settings:'الإعدادات'};
+  document.getElementById('topbar-title').textContent=titles[page]||page;
+  if(page==='grades')renderGrades();
+  if(page==='attendance')renderAttendance();
+  if(page==='assignments')renderAssignments('all');
+  if(page==='exams')renderExams();
+  if(page==='lessons')renderLessons();
+  if(page==='notifications')renderNotifications();
+  if(page==='progress')renderProgress();
+};
+
+// DASHBOARD
+function calcAttRate(){const r=AttendanceService.calcRate(myAttendance);return r}
+function renderDashboard(){
+  const att=calcAttRate();const avg=GradeService.calcAverage(myGrades);
+  const now=new Date();const pending=myAssignments.filter(a=>!a.submissions?.[currentUser.uid]&&new Date(a.dueDate?.seconds?a.dueDate.toDate():a.dueDate)>now).length;
+  document.getElementById('ds-attend').textContent=att.rate+'%';
+  document.getElementById('ds-avg').textContent=avg?avg+'%':'—';
+  document.getElementById('ds-pending').textContent=pending||'0';
+  document.getElementById('nb-assign').textContent=pending||'';
+  const offset=226-(226*att.rate/100);
+  document.getElementById('ring-att').style.strokeDashoffset=offset;
+  document.getElementById('ring-att-txt').textContent=att.rate+'%';
+  document.getElementById('dash-grades-list').innerHTML=myGrades.slice(0,4).map(gradeItemHTML).join('')||'<div class="empty-state"><div class="icon">📝</div><div class="msg">لا توجد درجات بعد</div></div>';
+  const pen=myAssignments.filter(a=>!a.submissions?.[currentUser.uid]).slice(0,3);
+  document.getElementById('dash-assignments').innerHTML=pen.map(a=>taskItemHTML(a,true)).join('')||'<div class="empty-state"><div class="icon">✅</div><div class="msg">لا توجد واجبات معلقة 🎉</div></div>';
+  const upcoming=myExams.filter(e=>{const d=e.date?.seconds?e.date.toDate():new Date(e.date);return d>=now}).sort((a,b)=>new Date(a.date)-new Date(b.date)).slice(0,3);
+  document.getElementById('dash-upcoming').innerHTML=upcoming.map(e=>{const d=e.date?.seconds?e.date.toDate():new Date(e.date);const diff=Math.ceil((d-now)/86400000);const urg=diff<=3?'color:var(--red)':diff<=7?'color:var(--gold)':'color:var(--text2)';
+    return`<div style="padding:8px 12px;border-bottom:1px solid var(--border);font-size:12px"><div style="font-weight:700;color:var(--ink)">${e.title}</div><div style="${urg};margin-top:2px">🗓 ${d.toLocaleDateString('ar-EG',{month:'short',day:'numeric'})} · ${diff===0?'اليوم! 🔥':diff===1?'غداً ⚡':'بعد '+diff+' يوم'}</div></div>`;
+  }).join('')||'<div style="padding:12px;font-size:12px;color:var(--muted);text-align:center">لا توجد امتحانات قادمة</div>';
+}
+
+// GRADES
+function gradeItemHTML(g){
+  const pct=Math.round((g.score/g.maxScore)*100);const[label,cls]=Utils.gradeBadge(pct);const color=Utils.gradeColor(pct);
+  const typeMap={exam:'امتحان',quiz:'كويز',hw:'واجب',midterm:'نصف فصل',final:'نهائي'};
+  return`<div class="grade-item">
+    <div class="grade-circle" style="color:${color};border-color:${color};background:${color}14">${pct}%</div>
+    <div class="grade-info"><div class="grade-name">${examMap[g.examId]?.title||'اختبار'}</div><div class="grade-meta">${typeMap[g.type]||g.type||'—'} · ${Utils.formatDate(g.gradedAt,true)}</div></div>
+    <div style="text-align:left"><div style="font-family:var(--mono);font-size:14px;font-weight:700;color:${color}">${g.score}/${g.maxScore}</div><span class="badge ${cls}" style="margin-top:4px">${label}</span></div>
+  </div>`;
+}
+function renderGrades(){
+  if(!myGrades.length){document.getElementById('grades-list').innerHTML='<div class="empty-state"><div class="icon">📝</div><div class="msg">لا توجد درجات بعد</div></div>';return}
+  const avg=GradeService.calcAverage(myGrades),best=Math.max(...myGrades.map(g=>Math.round((g.score/g.maxScore)*100)));
+  document.getElementById('pg-avg').textContent=avg+'%';document.getElementById('pg-best').textContent=best+'%';document.getElementById('pg-count').textContent=myGrades.length;
+  const pts=myGrades.slice().reverse().slice(-8).map(g=>Math.round((g.score/g.maxScore)*100));drawTrend(pts);
+  document.getElementById('grades-list').innerHTML=myGrades.map(gradeItemHTML).join('');
+}
+function drawTrend(pts){
+  if(pts.length<2)return;const W=600,H=72,pad=8;const xStep=(W-pad*2)/(pts.length-1);
+  const coords=pts.map((p,i)=>[pad+i*xStep,H-pad-((p/100)*(H-pad*2))]);
+  const line='M'+coords.map(([x,y])=>`${x},${y}`).join(' L');
+  const area=line+` L${coords[coords.length-1][0]},${H} L${coords[0][0]},${H} Z`;
+  document.getElementById('trend-line').setAttribute('d',line);document.getElementById('trend-area').setAttribute('d',area);
+  document.getElementById('trend-labels').innerHTML=pts.map(p=>`<span>${p}%</span>`).join('');
+}
+
+// ATTENDANCE
+function renderAttendance(){
+  const r=AttendanceService.calcRate(myAttendance);
+  document.getElementById('att-present').textContent=r.present;document.getElementById('att-late').textContent=r.late;document.getElementById('att-absent').textContent=r.absent;document.getElementById('att-rate').textContent=r.rate+'%';
+  renderCalendar();
+}
+function renderCalendar(){
+  const months=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  document.getElementById('cal-month-label').textContent=`${months[calMonth]} ${calYear}`;
+  const firstDay=new Date(calYear,calMonth,1).getDay(),daysInMonth=new Date(calYear,calMonth+1,0).getDate();
+  const today=new Date();const attMap={};myAttendance.forEach(r=>{if(r.dateStr)attMap[r.dateStr]=r.status});
+  let html='';for(let i=0;i<firstDay;i++)html+='<div class="att-day empty"></div>';
+  for(let d=1;d<=daysInMonth;d++){const dateStr=`${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;const status=attMap[dateStr]||'';const isToday=today.getDate()===d&&today.getMonth()===calMonth&&today.getFullYear()===calYear;html+=`<div class="att-day ${status||'no-record'} ${isToday?'today':''}" title="${status||'لا يوجد تسجيل'}">${d}</div>`}
+  document.getElementById('cal-grid').innerHTML=html;
+}
+window.changeMonth=function(dir){calMonth+=dir;if(calMonth>11){calMonth=0;calYear++}if(calMonth<0){calMonth=11;calYear--}renderCalendar()};
+
+// ASSIGNMENTS
+function taskItemHTML(a){
+  const due=a.dueDate?new Date(a.dueDate?.seconds?a.dueDate.toDate():a.dueDate):null;const now=new Date();const isOver=due&&due<now;const daysL=due?Math.ceil((due-now)/86400000):null;const subm=a.submissions?.[currentUser.uid];
+  const dueLabel=isOver?'🔴 انتهى':daysL===0?'🔥 اليوم!':daysL===1?'⚡ غداً':`بعد ${daysL} يوم`;const dueCls=isOver?'badge-red':daysL<=2?'badge-yellow':'badge-green';
+  return`<div class="task-item">
+    <div class="task-icon">${subm?'✅':isOver?'🔴':'📚'}</div>
+    <div class="task-info">
+      <div class="task-title">${a.title}</div>
+      ${a.description?`<div class="task-desc">${a.description}</div>`:''}
+      <div class="task-due">📅 ${due?due.toLocaleDateString('ar-EG'):'—'}<span class="badge ${dueCls}">${dueLabel}</span>${subm?'<span class="badge badge-green">✅ تم التسليم</span>':''}</div>
+    </div>
+    ${!subm&&!isOver?`<button class="btn btn-success btn-sm" onclick="submitAssign('${a.id}')">✅ تسليم</button>`:''}
+  </div>`;
+}
+function renderAssignments(filter='all'){
+  const now=new Date();let list=allAssignments;
+  if(filter==='pending')  list=allAssignments.filter(a=>!a.submissions?.[currentUser.uid]&&(!a.dueDate||new Date(a.dueDate?.seconds?a.dueDate.toDate():a.dueDate)>=now));
+  if(filter==='submitted')list=allAssignments.filter(a=>a.submissions?.[currentUser.uid]);
+  if(filter==='overdue')  list=allAssignments.filter(a=>!a.submissions?.[currentUser.uid]&&a.dueDate&&new Date(a.dueDate?.seconds?a.dueDate.toDate():a.dueDate)<now);
+  document.getElementById('assign-list').innerHTML=list.map(taskItemHTML).join('')||'<div class="empty-state"><div class="icon">📚</div><div class="msg">لا توجد واجبات في هذه الفئة</div></div>';
+}
+window.filterAssign=function(filter,btn){document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderAssignments(filter)};
+window.submitAssign=async function(id){
+  try{await AssignmentService.markSubmitted(id,currentUser.uid);const a=allAssignments.find(x=>x.id===id);if(a){if(!a.submissions)a.submissions={};a.submissions[currentUser.uid]=true}Utils.toast('تم التسليم ✅','success');renderAssignments('all');renderDashboard()}
+  catch{Utils.toast('خطأ في التسليم','error')}
+};
+
+// EXAMS
+function renderExams(){
+  const typeMap={quiz:'كويز',midterm:'نصف الفصل',final:'النهائي'};const now=new Date();
+  document.getElementById('exams-tbody').innerHTML=myExams.map(e=>{
+    const d=e.date?.seconds?e.date.toDate():new Date(e.date);const isPast=d<now;const diff=Math.ceil((d-now)/86400000);
+    const grade=myGrades.find(g=>g.examId===e.id);const pct=grade?Math.round((grade.score/grade.maxScore)*100):null;
+    const[label,cls]=pct!==null?Utils.gradeBadge(pct):(isPast?['—','badge-muted']:['قادم','badge-muted']);
+    const dateLabel=isPast?Utils.formatDate(e.date,true):diff===0?'اليوم! 🔥':diff===1?'غداً ⚡':`بعد ${diff} يوم`;
+    const dateCls=!isPast&&diff<=3?'color:var(--red);font-weight:700':'';
+    return`<tr><td style="font-weight:700;color:var(--ink)">${e.title}</td><td style="${dateCls}">${dateLabel}</td><td><span class="badge badge-purple">${typeMap[e.type]||e.type}</span></td><td>${grade?`<span class="text-mono" style="color:${Utils.gradeColor(pct)};font-weight:700">${grade.score}/${grade.maxScore}</span>`:(isPast?'<span class="text-muted">—</span>':'<span class="badge badge-muted">قادم</span>')}</td><td><span class="badge ${cls}">${label}</span></td></tr>`;
+  }).join('')||'<tr><td colspan="5"><div class="empty-state"><div class="icon">🧪</div><div class="msg">لا توجد امتحانات</div></div></td></tr>';
+}
+
+// LESSONS
+window.renderLessons=async function(){
+  if(!currentUser.groupId){document.getElementById('lessons-grid').innerHTML='<div class="empty-state" style="grid-column:1/-1"><div class="icon">🏫</div><div class="msg">لم تُضف لمجموعة بعد</div></div>';return}
+  document.getElementById('lessons-grid').innerHTML='<div style="display:flex;justify-content:center;padding:40px;grid-column:1/-1"><div class="spinner"></div></div>';
+  const lessons=await LessonService.getLessonsForGroup(currentUser.groupId);
+  if(!lessons.length){document.getElementById('lessons-grid').innerHTML='<div class="empty-state" style="grid-column:1/-1"><div class="icon">🎬</div><div class="msg">لا توجد حصص بعد</div></div>';return}
+  document.getElementById('lessons-grid').innerHTML=lessons.map(l=>{
+    const hasAccess=LessonService.hasAccess(l,currentUser.uid);
+    return`<div class="lesson-card-s">
+      <div class="lesson-cover">🎬${!hasAccess?'<div class="lesson-lock">🔒</div>':''}</div>
+      <div class="lesson-body">
+        <div class="lesson-title-s">${l.title}</div>
+        <div class="lesson-meta-s">${l.date?`<span>📅 ${l.date}</span>`:''} ${l.description?`<span>${l.description.slice(0,35)}${l.description.length>35?'...':''}</span>`:''}</div>
+        <div class="lesson-footer">
+          <span class="badge ${hasAccess?'badge-green':'badge-muted'}">${hasAccess?'✅ متاح':'🔒 مقفول'}</span>
+          ${hasAccess?`<button class="btn btn-success btn-sm" onclick="watchLesson('${l.id}')">▶️ شاهد</button>`:`<button class="btn btn-ghost btn-sm" onclick="openCodeEntry('${l.id}','${l.title.replace(/'/g,'')}')">🔑 أدخل الكود</button>`}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+};
+
+window.watchLesson=async function(lessonId){
+  const snap=await getDoc(doc(db,'lessons',lessonId));if(!snap.exists())return;
+  openWatchModal({id:snap.id,...snap.data()});
+};
+
+window.openCodeEntry=function(lessonId,title){
+  document.getElementById('watch-title').textContent=`🔑 أدخل كود الحصة`;
+  document.getElementById('watch-body').innerHTML=`
+    <div style="font-size:14px;font-weight:700;color:var(--ink);margin-bottom:6px">${title}</div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:16px">أدخل الكود المكون من 6 أحرف الذي حصلت عليه من المدرس لفتح هذه الحصة.</div>
+    <div class="code-wrap">
+      <div class="code-row">
+        <input id="lesson-code-input" class="code-input" maxlength="6" placeholder="XXXXXX" autocomplete="off">
+        <button class="btn btn-primary" id="code-submit-btn" onclick="submitLessonCode('${lessonId}')">🔓 فتح</button>
+      </div>
+      <div id="code-error" style="margin-top:10px;font-size:12px;color:var(--red)"></div>
+    </div>
+    <div style="margin-top:14px" class="info-note">💡 الكود يُستخدم مرة واحدة فقط — بعد إدخاله ستتمكن من مشاهدة الحصة في أي وقت.</div>`;
+  openModal('watch-modal');
+  setTimeout(()=>document.getElementById('lesson-code-input')?.focus(),200);
+  // Enter key support for code input
+  setTimeout(()=>{const inp=document.getElementById('lesson-code-input');if(inp)inp.addEventListener('keydown',e=>{if(e.key==='Enter')window.submitLessonCode(lessonId)})},250);
+};
+
+window.submitLessonCode=async function(lessonId){
+  const code=document.getElementById('lesson-code-input')?.value.trim();const errEl=document.getElementById('code-error');const btn=document.getElementById('code-submit-btn');
+  if(!code||code.length<6){if(errEl)errEl.textContent='أدخل الكود كاملاً (6 أحرف)';return}
+  if(btn){btn.disabled=true;btn.textContent='جار التحقق...'}if(errEl)errEl.textContent='';
+  try{const lesson=await LessonService.useCode(lessonId,currentUser.uid,code);Utils.toast('تم فتح الحصة ✅','success');openWatchModal(lesson);renderLessons()}
+  catch(e){if(errEl)errEl.textContent=e.message;if(btn){btn.disabled=false;btn.textContent='🔓 فتح'}}
+};
+
+function openWatchModal(lesson){
+  document.getElementById('watch-title').textContent=`🎬 ${lesson.title}`;
+  const url=lesson.videoUrl||'';let embedUrl=url;
+  const yt=url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/);if(yt)embedUrl=`https://www.youtube.com/embed/${yt[1]}?autoplay=1&rel=0`;
+  document.getElementById('watch-body').innerHTML=`
+    ${lesson.description?`<div style="font-size:13px;color:var(--text2);margin-bottom:12px">${lesson.description}</div>`:''}
+    ${lesson.date?`<div style="font-size:11px;color:var(--muted);margin-bottom:12px">📅 ${lesson.date}</div>`:''}
+    <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:var(--radius-sm);border:1px solid var(--border)">
+      <iframe src="${embedUrl}" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none" allowfullscreen allow="autoplay;encrypted-media"></iframe>
+    </div>
+    <div style="margin-top:12px;display:flex;gap:8px">
+      <a href="${url}" target="_blank" class="btn btn-ghost btn-sm">🔗 فتح في تبويب جديد</a>
+    </div>`;
+  openModal('watch-modal');
+}
+
+// NOTIFICATIONS
+function listenNotifs(){NotifService.listenUserNotifs(currentUser.uid,notifs=>{const c=notifs.length;document.getElementById('nb-notif').textContent=c||'';document.getElementById('bell-count').textContent=c||''})}
+async function renderNotifications(){
+  const notifs=await NotifService.getUserNotifs(currentUser.uid,50);
+  const icons={grade:'📝',assign:'📚',alert:'⚠️',info:'ℹ️'};const colors={grade:'var(--accent)',assign:'var(--gold)',alert:'var(--red)',info:'var(--green)'};
+  document.getElementById('notif-list').innerHTML=notifs.map(n=>`
+    <div class="snotif-item ${n.isRead?'':'unread'}">
+      <div class="snotif-dot" style="background:${colors[n.type]||'var(--muted)'}"></div>
+      <div style="flex:1"><div style="font-size:13px;color:var(--ink)">${icons[n.type]||''} ${n.message}</div><div style="font-size:11px;color:var(--muted);margin-top:2px">${Utils.timeAgo(n.createdAt)}</div></div>
+      ${!n.isRead?`<button class="btn btn-ghost btn-sm" onclick="markRead('${n.id}')">✓</button>`:''}
+    </div>`).join('')||'<div class="empty-state"><div class="icon">🔕</div><div class="msg">لا توجد إشعارات</div></div>';
+}
+window.markRead=async id=>{await NotifService.markRead(id);renderNotifications()};
+window.markAllRead=async()=>{await NotifService.markAllRead(currentUser.uid);renderNotifications();Utils.toast('تم','success')};
+
+// PROGRESS
+async function renderProgress(){
+  const sl=document.getElementById('strength-list'),wl=document.getElementById('weakness-list'),el=document.getElementById('comparison-chart');
+  if(!myGrades.length){[sl,wl,el].forEach(e=>{e.innerHTML='<div class="empty-state"><div class="icon">📊</div><div class="msg">لا توجد بيانات كافية بعد</div></div>'});return}
+  const avg=GradeService.calcAverage(myGrades),att=calcAttRate(),best=Math.max(...myGrades.map(g=>Math.round((g.score/g.maxScore)*100))),worst=Math.min(...myGrades.map(g=>Math.round((g.score/g.maxScore)*100)));
+  const trend=myGrades.length>=2?Math.round((myGrades[0].score/myGrades[0].maxScore)*100)-Math.round((myGrades[myGrades.length-1].score/myGrades[myGrades.length-1].maxScore)*100):0;
+  const strengths=[];
+  if(avg>=85)strengths.push({label:'مستوى ممتاز',val:avg,color:'var(--green)'});else if(avg>=70)strengths.push({label:'مستوى جيد',val:avg,color:'var(--accent)'});
+  if(att.rate>=85)strengths.push({label:'التزام عالي بالحضور',val:att.rate,color:'var(--green)'});
+  if(trend>5)strengths.push({label:'تحسن ملحوظ في الدرجات',val:Math.min(trend+50,100),color:'var(--green)'});
+  if(best>=90)strengths.push({label:'أعلى درجة ممتازة',val:best,color:'var(--green)'});
+  sl.innerHTML=strengths.length?'<div style="display:flex;flex-direction:column;gap:8px">'+strengths.map(s=>`<div class="bar-group"><div class="bar-label-txt" style="width:160px">${s.label}</div><div class="hbar"><div class="hbar-fill" style="width:${s.val}%;background:${s.color}"><span class="hbar-val">${s.val}%</span></div></div></div>`).join('')+'</div>':'<div class="empty-state"><div class="icon">💪</div><div class="msg">واصل التحسن وستظهر نقاط قوتك!</div></div>';
+  const weaknesses=[];
+  if(avg<50)weaknesses.push('⚠️ متوسط درجاتك أقل من 50% — راجع المادة مع المدرس فوراً');else if(avg<65)weaknesses.push('📌 مستواك مقبول — حاول ترفعه للمستوى الجيد');
+  if(att.rate<75)weaknesses.push('📌 نسبة حضورك منخفضة — الحضور يؤثر على الفهم');
+  if(att.rate<50)weaknesses.push('🚨 غيابك كثير جداً — خطر على مستواك');
+  if(worst<40)weaknesses.push(`📌 حصلت على ${worst}% في أضعف امتحان — راجع هذا الموضوع`);
+  if(trend<-10)weaknesses.push('📉 درجاتك في انخفاض — ركز أكثر في الفترة الأخيرة');
+  wl.innerHTML=weaknesses.length?'<div style="display:flex;flex-direction:column;gap:7px">'+weaknesses.map(w=>`<div style="padding:8px 10px;background:var(--red-bg);border-radius:var(--radius-sm);border-right:3px solid var(--red);font-size:12px;color:var(--text2)">${w}</div>`).join('')+'</div>':'<div class="empty-state"><div class="icon">🎯</div><div class="msg">ممتاز! لا توجد نقاط ضعف واضحة</div></div>';
+  let groupAvg=null;if(currentUser.groupId){try{const a=await AnalyticsService.getGroupAnalytics(currentUser.groupId);groupAvg=a?.avgGrade??null}catch{}}
+  const myColor=groupAvg===null||avg>=groupAvg?'var(--green)':'var(--gold)';const diff=groupAvg!==null?avg-groupAvg:null;const diffText=diff!==null?(diff>0?`+${diff}% فوق متوسط المجموعة 🏆`:diff<0?`${diff}% تحت متوسط المجموعة`:'مساوٍ لمتوسط المجموعة'):'';
+  el.innerHTML=`<div style="display:flex;flex-direction:column;gap:10px">
+    <div class="bar-group"><div class="bar-label-txt" style="width:70px">أنت</div><div class="hbar"><div class="hbar-fill" style="width:${avg}%;background:${myColor}"><span class="hbar-val">${avg}%</span></div></div></div>
+    ${groupAvg!==null?`<div class="bar-group"><div class="bar-label-txt" style="width:70px">المجموعة</div><div class="hbar"><div class="hbar-fill" style="width:${groupAvg}%;background:var(--border2)"><span class="hbar-val" style="color:var(--text)">${groupAvg}%</span></div></div></div>`:''} 
+    ${diff!==null?`<div style="font-size:12px;color:${diff>=0?'var(--green)':'var(--gold)'};font-weight:700;margin-top:2px">${diffText}</div>`:''}
+  </div>`;
+}
+
+// SETTINGS
+window.saveProfile=async function(){
+  const name=document.getElementById('set-name').value.trim();if(!name)return;
+  await UserService.updateUser(currentUser.uid,{name});
+  document.getElementById('sb-name').textContent=name;document.getElementById('set-name-disp').textContent=name;document.getElementById('dash-welcome').textContent=`أهلاً، ${name.split(' ')[0]}!`;
+  Utils.toast('تم الحفظ ✅','success');
+};
+window.changePass=async function(){
+  const p1=document.getElementById('set-pass').value,p2=document.getElementById('set-pass2').value;
+  if(p1!==p2){Utils.toast('كلمتا المرور غير متطابقتين','error');return}
+  if(p1.length<6){Utils.toast('6 أحرف على الأقل','error');return}
+  try{await updatePassword(auth.currentUser,p1);Utils.toast('تم التغيير ✅','success')}
+  catch{Utils.toast('أعد تسجيل الدخول أولاً ثم حاول مجدداً','error')}
+};
+
+window.addEventListener('online',()=>Utils.toast('عاد الاتصال ✅','success'));
+window.addEventListener('offline',()=>Utils.toast('انقطع الإنترنت ⚠️','warning'));
+</script>
+</body>
+</html>

@@ -1,0 +1,161 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ═══════════════════════════════════════════
+    //  HELPER FUNCTIONS
+    // ═══════════════════════════════════════════
+
+    // هل المستخدم مسجل دخول؟
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    // هل هو مدرس (admin)؟
+    function isAdmin() {
+      return isAuth() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // هل هو الطالب صاحب الـ doc؟
+    function isOwner(uid) {
+      return isAuth() && request.auth.uid == uid;
+    }
+
+    // هل هو طالب نشط؟
+    function isActiveStudent() {
+      return isAuth() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'student' &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isActive == true;
+    }
+
+    // ═══════════════════════════════════════════
+    //  USERS COLLECTION
+    // ═══════════════════════════════════════════
+    match /users/{userId} {
+      // القراءة: المدرس يقرأ أي مستخدم — الطالب يقرأ بياناته فقط
+      allow read: if isAdmin() || isOwner(userId);
+
+      // الكتابة: المدرس يكتب أي مستخدم — الطالب يعدل بياناته فقط (اسم فقط)
+      allow create: if isAdmin();
+      allow update: if isAdmin() || (isOwner(userId) && onlyUpdatingFields(['name', 'updatedAt']));
+      allow delete: if false; // لا حذف مباشر — نستخدم isActive: false
+    }
+
+    // ═══════════════════════════════════════════
+    //  GROUPS COLLECTION
+    // ═══════════════════════════════════════════
+    match /groups/{groupId} {
+      // الطلاب يقرأون المجموعات (عشان يشوفوا اسم مجموعتهم)
+      allow read: if isAuth();
+      // الكتابة للمدرس فقط
+      allow write: if isAdmin();
+    }
+
+    // ═══════════════════════════════════════════
+    //  ATTENDANCE COLLECTION
+    // ═══════════════════════════════════════════
+    match /attendance/{recordId} {
+      // الطالب يقرأ سجلات حضوره فقط — المدرس يقرأ الكل
+      allow read: if isAdmin() ||
+        (isActiveStudent() && resource.data.studentId == request.auth.uid);
+      // الكتابة للمدرس فقط
+      allow write: if isAdmin();
+    }
+
+    // ═══════════════════════════════════════════
+    //  GRADES COLLECTION
+    // ═══════════════════════════════════════════
+    match /grades/{gradeId} {
+      // الطالب يقرأ درجاته فقط — المدرس يقرأ الكل
+      allow read: if isAdmin() ||
+        (isActiveStudent() && resource.data.studentId == request.auth.uid);
+      // الكتابة للمدرس فقط
+      allow write: if isAdmin();
+    }
+
+    // ═══════════════════════════════════════════
+    //  EXAMS COLLECTION
+    // ═══════════════════════════════════════════
+    match /exams/{examId} {
+      // الطلاب يقرأون الامتحانات (عشان يشوفوا المواعيد)
+      allow read: if isAuth();
+      // الكتابة للمدرس فقط
+      allow write: if isAdmin();
+    }
+
+    // ═══════════════════════════════════════════
+    //  ASSIGNMENTS COLLECTION
+    // ═══════════════════════════════════════════
+    match /assignments/{assignId} {
+      // الطلاب يقرأون الواجبات
+      allow read: if isAuth();
+      // المدرس يكتب — الطالب يعدل submissions فقط (لتسليم الواجب)
+      allow create: if isAdmin();
+      allow update: if isAdmin() || (isActiveStudent() && onlyUpdatingSubmissions());
+      allow delete: if isAdmin();
+    }
+
+    // ═══════════════════════════════════════════
+    //  NOTIFICATIONS COLLECTION
+    // ═══════════════════════════════════════════
+    match /notifications/{notifId} {
+      // الطالب يقرأ إشعاراته فقط — المدرس يقرأ الكل
+      allow read: if isAdmin() ||
+        (isAuth() && resource.data.toUid == request.auth.uid);
+      // المدرس يرسل — الطالب يعدل isRead فقط
+      allow create: if isAdmin();
+      allow update: if isAdmin() ||
+        (isAuth() && resource.data.toUid == request.auth.uid && onlyUpdatingFields(['isRead']));
+      allow delete: if isAdmin();
+    }
+
+    // ═══════════════════════════════════════════
+    //  LESSONS COLLECTION
+    // ═══════════════════════════════════════════
+    match /lessons/{lessonId} {
+      // الطلاب يقرأون الحصص (عشان يشوفوا القائمة)
+      allow read: if isAuth();
+      // المدرس يكتب
+      allow create: if isAdmin();
+      allow delete: if isAdmin();
+      // التعديل: المدرس يعدل أي حاجة — الطالب يعدل accessList فقط (عند استخدام الكود)
+      allow update: if isAdmin() ||
+        (isActiveStudent() && onlyUpdatingLessonAccess());
+    }
+
+    // ═══════════════════════════════════════════
+    //  ANALYTICS COLLECTION
+    // ═══════════════════════════════════════════
+    match /analytics/{groupId} {
+      // الطلاب يقرأون تحليلات مجموعتهم فقط — المدرس يقرأ الكل
+      allow read: if isAdmin() ||
+        (isActiveStudent() &&
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.groupId == groupId);
+      // الكتابة للمدرس فقط (أو client-side analytics update)
+      allow write: if isAdmin();
+    }
+
+    // ═══════════════════════════════════════════
+    //  HELPER RULE FUNCTIONS
+    // ═══════════════════════════════════════════
+
+    // التحقق إن الطالب بيعدل حقول معينة فقط
+    function onlyUpdatingFields(fields) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields);
+    }
+
+    // التحقق إن الطالب بيعدل submissions فقط
+    function onlyUpdatingSubmissions() {
+      let changedKeys = request.resource.data.diff(resource.data).affectedKeys();
+      return changedKeys.size() == 1 &&
+        changedKeys.hasAll(['submissions']);
+    }
+
+    // التحقق إن الطالب بيعدل accessList و codeUsed فقط
+    function onlyUpdatingLessonAccess() {
+      let changedKeys = request.resource.data.diff(resource.data).affectedKeys();
+      return changedKeys.hasOnly(['accessList', 'codeUsed']);
+    }
+  }
+}

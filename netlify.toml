@@ -1,0 +1,50 @@
+# ═══════════════════════════════════════
+#  Netlify Configuration — SMT Platform
+# ═══════════════════════════════════════
+
+[build]
+  publish = "."
+
+# ═══════════════════════════════════════
+#  REDIRECT RULES
+# ═══════════════════════════════════════
+
+# الـ root يروح لـ index.html
+[[redirects]]
+  from = "/"
+  to = "/index.html"
+  status = 200
+
+# أي مسار تاني يرجع لـ index.html (SPA fallback)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# ═══════════════════════════════════════
+#  HEADERS (Security + Performance)
+# ═══════════════════════════════════════
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    # منع الـ clickjacking
+    X-Frame-Options = "DENY"
+    # منع MIME type sniffing
+    X-Content-Type-Options = "nosniff"
+    # XSS Protection
+    X-XSS-Protection = "1; mode=block"
+    # Referrer Policy
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+# Cache للـ HTML — لا كاش عشان يتحدث دايماً
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+
+# Cache للـ Google Fonts
+[[headers]]
+  for = "/fonts/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
