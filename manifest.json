@@ -2,7 +2,7 @@
   "name":             "Educational Platform",
   "short_name":       "EduPlatform",
   "description":      "نظام إدارة المراكز التعليمية",
-  "start_url":        "/",
+  "start_url":        "./",
   "display":          "standalone",
   "orientation":      "portrait",
   "background_color": "#f5f2ec",
