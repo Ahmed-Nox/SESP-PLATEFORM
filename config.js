@@ -42,3 +42,5 @@ const APP_CONFIG = {
 Object.freeze(APP_CONFIG);
 Object.freeze(APP_CONFIG.firebase);
 Object.freeze(APP_CONFIG.session);
+
+export { APP_CONFIG };

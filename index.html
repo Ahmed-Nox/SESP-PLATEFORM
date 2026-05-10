@@ -97,8 +97,8 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
   <div class="footer"><span id="app-footer"></span></div>
 </div>
 
-<script src="./config.js"></script>
 <script type="module">
+import { APP_CONFIG } from './config.js';
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import{getAuth,signInWithEmailAndPassword,onAuthStateChanged}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import{getFirestore,doc,getDoc}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
