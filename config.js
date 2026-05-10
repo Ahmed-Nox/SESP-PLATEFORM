@@ -17,12 +17,12 @@ const APP_CONFIG = {
 
   // ── Firebase Config ──
   firebase: {
-    apiKey:            "FIREBASE_API_KEY",
-    authDomain:        "FIREBASE_AUTH_DOMAIN",
-    projectId:         "FIREBASE_PROJECT_ID",
-    storageBucket:     "FIREBASE_STORAGE_BUCKET",
-    messagingSenderId: "FIREBASE_MESSAGING_SENDER_ID",
-    appId:             "FIREBASE_APP_ID"
+    apiKey:            "AIzaSyDaqELq9wH5ewLLbO7KE0du04uJmd_ndl4",
+    authDomain:        "edu-plateform-mwl.firebaseapp.com",
+    projectId:         "edu-plateform-mwl",
+    storageBucket:     "edu-plateform-mwl.firebasestorage.app",
+    messagingSenderId: "484666536360",
+    appId:             "1:484666536360:web:aae1837e5a749a4c53ed9d"
   },
 
   // ── إعدادات الجلسة ──
