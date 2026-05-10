@@ -3,7 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SMT Platform — تسجيل الدخول</title>
+  <!-- SEO & PWA -->
+  <meta name="description" content="نظام إدارة المراكز التعليمية">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#1a4a8a">
+  <meta property="og:type" content="website">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="manifest" href="/manifest.json">
+<title id="app-title">منصة — تسجيل الدخول</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=IBM+Plex+Mono&display=swap" rel="stylesheet">
 <style>
@@ -61,15 +69,15 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 <div class="wrap">
   <div class="logo-area">
     <div class="emblem">🎓</div>
-    <span class="logo-ar">منصة SMT التعليمية</span>
-    <span class="logo-en">SMT Educational Platform</span>
+    <span class="logo-ar" id="app-name-ar"></span>
+    <span class="logo-en" id="app-name-en"></span>
   </div>
   <div class="card">
     <div class="card-title">تسجيل الدخول</div>
     <div class="card-sub">اختر نوع حسابك ثم أدخل بيانات الدخول</div>
     <div class="role-grid">
-      <button class="role-btn active" data-role="student"><span class="ri">👨‍🎓</span>طالب</button>
-      <button class="role-btn" data-role="admin"><span class="ri">👨‍🏫</span>مدرس</button>
+      <button class="role-btn active" onclick="setRole('student',this)"><span class="ri">👨‍🎓</span>طالب</button>
+      <button class="role-btn" onclick="setRole('admin',this)"><span class="ri">👨‍🏫</span>مدرس</button>
     </div>
     <div class="error-box" id="error-box"><span>⚠️</span><span id="error-msg"></span></div>
     <div class="form-group">
@@ -80,13 +88,14 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
       <label class="form-label">كلمة المرور</label>
       <input type="password" id="login-pass" class="form-input" placeholder="••••••••" autocomplete="current-password">
     </div>
-    <button class="btn-login" id="login-btn">
+    <button class="btn-login" id="login-btn" onclick="doLogin()">
       <span id="btn-text">دخول إلى المنصة</span>
     </button>
   </div>
-  <div class="footer">منصة SMT التعليمية &copy; 2025 — جميع الحقوق محفوظة</div>
+  <div class="footer"><span id="app-footer"></span></div>
 </div>
 
+<script src="config.js"></script>
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import{getAuth,signInWithEmailAndPassword,onAuthStateChanged}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
@@ -95,15 +104,7 @@ import{getFirestore,doc,getDoc}from"https://www.gstatic.com/firebasejs/10.12.0/f
 // ════════════════════════════════════════
 //  🔥 FIREBASE CONFIG — ضع قيمك هنا
 // ════════════════════════════════════════
-const firebaseConfig = {
-  apiKey:            "AIzaSyDaqELq9wH5ewLLbO7KE0du04uJmd_ndl4",
-  authDomain:        "edu-plateform-mwl.firebaseapp.com",
-  projectId:         "edu-plateform-mwl",
-  storageBucket:     "edu-plateform-mwl.firebasestorage.app",
-  messagingSenderId: "484666536360",
-  appId:             "1:484666536360:web:aae1837e5a749a4c53ed9d",
-  measurementId:     "G-2GB1SGD06E"
-};
+const firebaseConfig = APP_CONFIG.firebase;
 // ════════════════════════════════════════
 
 const app  = initializeApp(firebaseConfig);
@@ -123,22 +124,22 @@ function redirect(role) {
   window.location.href = role === 'admin' ? 'admin.html' : 'student.html';
 }
 
+// Apply config
+document.getElementById('app-name-ar').textContent = APP_CONFIG.name_ar;
+document.getElementById('app-name-en').textContent = APP_CONFIG.name_en;
+document.getElementById('app-footer').textContent  = APP_CONFIG.name_ar + ' © ' + APP_CONFIG.copyright_year + ' — جميع الحقوق محفوظة';
+document.getElementById('app-title').textContent   = APP_CONFIG.name_ar + ' — تسجيل الدخول';
+
 let selectedRole = 'student';
 
-// Wire role buttons
-document.querySelectorAll('.role-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    selectedRole = btn.dataset.role;
-    document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    hideError();
-  });
-});
+window.setRole = function(role, btn) {
+  selectedRole = role;
+  document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  hideError();
+};
 
-// Wire login button
-document.getElementById('login-btn').addEventListener('click', doLogin);
-
-async function doLogin() {
+window.doLogin = async function() {
   const email = document.getElementById('login-email').value.trim();
   const pass  = document.getElementById('login-pass').value;
   if (!email || !pass) { showError('أدخل البريد الإلكتروني وكلمة المرور'); return; }
@@ -180,7 +181,7 @@ function setLoading(v) {
 function showError(msg) { document.getElementById('error-msg').textContent = msg; document.getElementById('error-box').classList.add('show'); }
 function hideError()    { document.getElementById('error-box').classList.remove('show'); }
 
-document.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+document.addEventListener('keydown', e => { if (e.key === 'Enter') window.doLogin(); });
 </script>
 </body>
 </html>

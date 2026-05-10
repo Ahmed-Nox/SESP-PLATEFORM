@@ -1,0 +1,7 @@
+User-agent: *
+Disallow: /admin.html
+Disallow: /student.html
+Allow: /index.html
+Allow: /
+
+Sitemap: https://YOUR_DOMAIN/sitemap.xml

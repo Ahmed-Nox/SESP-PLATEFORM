@@ -3,7 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SMT — بوابة الطالب</title>
+  <!-- SEO & PWA -->
+  <meta name="description" content="نظام إدارة المراكز التعليمية">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#1a4a8a">
+  <meta property="og:type" content="website">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="manifest" href="/manifest.json">
+<title id="app-title">منصة — بوابة الطالب</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=IBM+Plex+Mono&display=swap" rel="stylesheet">
 <style>
@@ -255,6 +263,18 @@ tbody tr:hover{background:var(--surface2)}
 
 /* Info / warn notes */
 .info-note{background:var(--accent-bg);border:1px solid #b8d0f0;border-radius:var(--radius-sm);padding:10px 13px;font-size:12px;color:var(--text2)}
+
+/* ── DEVICE LIMIT POPUP ── */
+.device-popup{position:fixed;inset:0;background:rgba(26,20,14,.6);backdrop-filter:blur(5px);z-index:3000;display:flex;align-items:center;justify-content:center;padding:20px}
+.device-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:30px;max-width:420px;width:100%;box-shadow:var(--shadow-md);text-align:center}
+.device-icon{font-size:48px;margin-bottom:14px}
+.device-title{font-size:17px;font-weight:700;color:var(--ink);margin-bottom:8px}
+.device-msg{font-size:13px;color:var(--text2);margin-bottom:22px;line-height:1.7}
+.device-actions{display:flex;flex-direction:column;gap:10px}
+/* ── AUTO LOGOUT BAR ── */
+.autologout-bar{position:fixed;bottom:0;left:0;right:0;background:var(--yellow-bg);border-top:2px solid #e0c870;padding:12px 22px;display:flex;align-items:center;justify-content:space-between;z-index:1500;animation:slideUp .3s ease}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:none}}
+.autologout-txt{font-size:13px;color:var(--yellow);font-weight:600}
 </style>
 </head>
 <body>
@@ -264,7 +284,7 @@ tbody tr:hover{background:var(--surface2)}
 <aside class="sidebar">
   <div class="sidebar-logo">
     <div class="logo-emblem-sm">🎓</div>
-    <div><div class="logo-text">منصة SMT</div><div class="logo-sub">بوابة الطالب</div></div>
+    <div><div class="logo-text" id="app-name-ar"></div><div class="logo-sub">بوابة الطالب</div></div>
   </div>
   <nav class="nav">
     <div class="nav-section">الرئيسية</div>
@@ -487,6 +507,7 @@ tbody tr:hover{background:var(--surface2)}
 </div>
 
 <!-- ═══ FIREBASE + LOGIC ═══ -->
+<script src="config.js"></script>
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import{getAuth,signOut,onAuthStateChanged,updatePassword}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
@@ -495,15 +516,7 @@ import{getFirestore,collection,doc,getDoc,getDocs,updateDoc,query,where,orderBy,
 // ════════════════════════════════════════
 //  🔥 FIREBASE CONFIG — ضع قيمك هنا
 // ════════════════════════════════════════
-const firebaseConfig = {
-  apiKey:            "AIzaSyDaqELq9wH5ewLLbO7KE0du04uJmd_ndl4",
-  authDomain:        "edu-plateform-mwl.firebaseapp.com",
-  projectId:         "edu-plateform-mwl",
-  storageBucket:     "edu-plateform-mwl.firebasestorage.app",
-  messagingSenderId: "484666536360",
-  appId:             "1:484666536360:web:aae1837e5a749a4c53ed9d",
-  measurementId:     "G-2GB1SGD06E"
-};
+const firebaseConfig = APP_CONFIG.firebase;
 // ════════════════════════════════════════
 const app=initializeApp(firebaseConfig);
 const auth=getAuth(app);
@@ -582,6 +595,89 @@ let currentUser=null,myGroup=null,myGrades=[],myAttendance=[],myAssignments=[],m
 
 window.doLogout=()=>signOut(auth).then(()=>window.location.href='index.html');
 
+// ══════════════════════════════════════
+//  DEVICE FINGERPRINT
+// ══════════════════════════════════════
+function getDeviceFingerprint() {
+  const nav = window.navigator;
+  const raw = [nav.userAgent,nav.language,nav.platform,screen.width,screen.height,screen.colorDepth,Intl.DateTimeFormat().resolvedOptions().timeZone,nav.hardwareConcurrency||''].join('|');
+  let hash = 0;
+  for (let i = 0; i < raw.length; i++) { hash = ((hash << 5) - hash) + raw.charCodeAt(i); hash |= 0; }
+  return 'dev_' + Math.abs(hash).toString(36);
+}
+
+const MAX_DEVICES = APP_CONFIG.session.max_devices;
+
+const DeviceService = {
+  async checkAndRegister(uid) {
+    const fp = getDeviceFingerprint();
+    const userSnap = await getDoc(doc(db,'users',uid));
+    const userData  = userSnap.data();
+    const devices   = userData.devices || [];
+    if (devices.includes(fp)) return {allowed:true};
+    if (devices.length < MAX_DEVICES) {
+      await updateDoc(doc(db,'users',uid), {devices:[...devices, fp]});
+      return {allowed:true};
+    }
+    return {allowed:false, fp, currentDevices:devices};
+  },
+  async resetAndRegister(uid, newFp) {
+    await updateDoc(doc(db,'users',uid), {devices:[newFp]});
+  },
+};
+
+// ══════════════════════════════════════
+//  AUTO LOGOUT — 120 minutes for student
+// ══════════════════════════════════════
+(function initAutoLogout() {
+  const TIMEOUT_MS = APP_CONFIG.session.student_timeout_minutes * 60 * 1000;
+  const WARNING_MS = (APP_CONFIG.session.student_timeout_minutes - 1) * 60 * 1000;
+  let logoutTimer, warningTimer, warningBar;
+  function resetTimers() {
+    clearTimeout(logoutTimer); clearTimeout(warningTimer);
+    warningBar?.remove(); warningBar = null;
+    warningTimer = setTimeout(() => {
+      warningBar = document.createElement('div');
+      warningBar.className = 'autologout-bar';
+      warningBar.innerHTML = `<span class="autologout-txt">⚠️ ستُسجَّل خروجك تلقائياً بعد دقيقة بسبب عدم النشاط</span><button class="btn btn-ghost btn-sm" onclick="document.querySelector('.autologout-bar')?.remove();window._startAutoLogout?.()">أنا هنا</button>`;
+      document.body.appendChild(warningBar);
+    }, WARNING_MS);
+    logoutTimer = setTimeout(async () => { await signOut(auth); window.location.href = 'index.html'; }, TIMEOUT_MS);
+  }
+  ['mousemove','keydown','click','touchstart','scroll'].forEach(evt => document.addEventListener(evt, resetTimers, {passive:true}));
+  window._startAutoLogout = resetTimers;
+})();
+
+function showDeviceLimitPopup(uid, fp) {
+  document.getElementById('device-popup')?.remove();
+  const popup = document.createElement('div');
+  popup.id = 'device-popup';
+  popup.className = 'device-popup';
+  popup.innerHTML = `
+    <div class="device-box">
+      <div class="device-icon">📱</div>
+      <div class="device-title">وصلت للحد الأقصى للأجهزة</div>
+      <div class="device-msg">لقد سجّلت الدخول على <strong>${MAX_DEVICES} أجهزة</strong> وهو الحد المسموح به.<br>هل تريد تسجيل الخروج من جميع الأجهزة الأخرى وتسجيل الدخول من هذا الجهاز؟</div>
+      <div class="device-actions">
+        <button class="btn btn-primary btn-full" onclick="resetDevices('${uid}','${fp}')">🔄 نعم، سجّل الخروج من كل الأجهزة وادخل من هنا</button>
+        <button class="btn btn-ghost btn-full" onclick="doLogout()">🚪 لا، سجّل الخروج من هنا</button>
+      </div>
+    </div>`;
+  document.body.appendChild(popup);
+}
+
+window.resetDevices = async function(uid, fp) {
+  try {
+    await DeviceService.resetAndRegister(uid, fp);
+    document.getElementById('device-popup')?.remove();
+    Utils.toast('تم تسجيل هذا الجهاز ✅','success');
+    window._startAutoLogout?.();
+    // Continue loading
+    await loadAllData();
+    renderDashboard();
+  } catch { Utils.toast('خطأ — حاول مرة أخرى','error'); }
+};
+
 // INIT
 onAuthStateChanged(auth,async user=>{
   if(!user){window.location.href='index.html';return}
@@ -590,6 +686,10 @@ onAuthStateChanged(auth,async user=>{
   if(snap.data().role==='admin'){window.location.href='admin.html';return}
   currentUser={uid:user.uid,...snap.data()};
   const firstName=(currentUser.name||'طالب').split(' ')[0];
+  // Apply config
+  document.getElementById('app-name-ar').textContent = APP_CONFIG.name_ar;
+  document.getElementById('app-title').textContent   = APP_CONFIG.name_ar + ' — بوابة الطالب';
+
   document.getElementById('sb-name').textContent=currentUser.name||'طالب';
   document.getElementById('sb-sid').textContent=currentUser.studentId||'—';
   document.getElementById('sb-avatar').textContent=firstName[0];
@@ -610,6 +710,13 @@ onAuthStateChanged(auth,async user=>{
   }else{
     document.getElementById('dash-group').textContent='لم تُضف لمجموعة بعد';
   }
+  // ── Device check ──
+  const deviceResult = await DeviceService.checkAndRegister(user.uid);
+  if (!deviceResult.allowed) {
+    showDeviceLimitPopup(user.uid, deviceResult.fp);
+    return;
+  }
+  window._startAutoLogout?.();
   listenNotifs();
   await loadAllData();
   renderDashboard();
@@ -749,6 +856,19 @@ function renderExams(){
 }
 
 // LESSONS
+window.watchLessonFree = async function(lessonId) {
+  // Grant access automatically for lessons with requireCode=false
+  const snap = await getDoc(doc(db,'lessons',lessonId));
+  if (!snap.exists()) return;
+  const lesson = {id:snap.id,...snap.data()};
+  if (!LessonService.hasAccess(lesson, currentUser.uid)) {
+    // Auto-grant access
+    const list = lesson.accessList||[];
+    await updateDoc(doc(db,'lessons',lessonId), {accessList:[...list, currentUser.uid]});
+  }
+  openWatchModal(lesson);
+};
+
 window.renderLessons=async function(){
   if(!currentUser.groupId){document.getElementById('lessons-grid').innerHTML='<div class="empty-state" style="grid-column:1/-1"><div class="icon">🏫</div><div class="msg">لم تُضف لمجموعة بعد</div></div>';return}
   document.getElementById('lessons-grid').innerHTML='<div style="display:flex;justify-content:center;padding:40px;grid-column:1/-1"><div class="spinner"></div></div>';
@@ -762,8 +882,13 @@ window.renderLessons=async function(){
         <div class="lesson-title-s">${l.title}</div>
         <div class="lesson-meta-s">${l.date?`<span>📅 ${l.date}</span>`:''} ${l.description?`<span>${l.description.slice(0,35)}${l.description.length>35?'...':''}</span>`:''}</div>
         <div class="lesson-footer">
-          <span class="badge ${hasAccess?'badge-green':'badge-muted'}">${hasAccess?'✅ متاح':'🔒 مقفول'}</span>
-          ${hasAccess?`<button class="btn btn-success btn-sm" onclick="watchLesson('${l.id}')">▶️ شاهد</button>`:`<button class="btn btn-ghost btn-sm" onclick="openCodeEntry('${l.id}','${l.title.replace(/'/g,'')}')">🔑 أدخل الكود</button>`}
+          <span class="badge ${hasAccess?'badge-green':l.requireCode===false?'badge-cyan':'badge-muted'}">${hasAccess?'✅ متاح':l.requireCode===false?'🔓 مفتوح':'🔒 مقفول'}</span>
+          ${hasAccess?
+            `<button class="btn btn-success btn-sm" onclick="watchLesson('${l.id}')">▶️ شاهد</button>`:
+            l.requireCode===false?
+            `<button class="btn btn-success btn-sm" onclick="watchLessonFree('${l.id}')">▶️ شاهد مباشرة</button>`:
+            `<button class="btn btn-ghost btn-sm" onclick="openCodeEntry('${l.id}','${l.title.replace(/'/g,'')}')">🔑 أدخل الكود</button>`
+          }
         </div>
       </div>
     </div>`;

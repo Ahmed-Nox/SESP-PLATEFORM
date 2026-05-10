@@ -3,7 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SMT — لوحة المدرس</title>
+  <!-- SEO & PWA -->
+  <meta name="description" content="نظام إدارة المراكز التعليمية">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#1a4a8a">
+  <meta property="og:type" content="website">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="manifest" href="/manifest.json">
+<title id="app-title">منصة — لوحة المدرس</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=IBM+Plex+Mono&display=swap" rel="stylesheet">
 <style>
@@ -177,6 +185,42 @@ select.form-input{cursor:pointer}
 .lesson-code.used{color:var(--muted);text-decoration:line-through}
 .info-note{background:var(--accent-bg);border:1px solid #b8d0f0;border-radius:var(--radius-sm);padding:10px 13px;font-size:12px;color:var(--text2)}
 .warn-note{background:var(--yellow-bg);border:1px solid #e0c870;border-radius:var(--radius-sm);padding:10px 13px;font-size:12px;color:var(--yellow)}
+
+/* ── PERMISSION POPUP ── */
+.perm-popup{position:fixed;inset:0;background:rgba(26,20,14,.5);backdrop-filter:blur(4px);z-index:2000;display:flex;align-items:center;justify-content:center;padding:20px;animation:fadeIn .2s ease}
+.perm-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:28px;max-width:400px;width:100%;box-shadow:var(--shadow-md);text-align:center}
+.perm-icon{font-size:40px;margin-bottom:12px}
+.perm-title{font-size:16px;font-weight:700;color:var(--ink);margin-bottom:8px}
+.perm-msg{font-size:13px;color:var(--text2);margin-bottom:20px;line-height:1.6}
+.perm-actions{display:flex;gap:10px;justify-content:center}
+
+/* ── AUTO LOGOUT WARNING ── */
+.autologout-bar{position:fixed;bottom:0;left:0;right:0;background:var(--yellow-bg);border-top:2px solid #e0c870;padding:12px 22px;display:flex;align-items:center;justify-content:space-between;z-index:1500;animation:slideUp .3s ease}
+.autologout-txt{font-size:13px;color:var(--yellow);font-weight:600}
+
+/* ── UPLOAD PROGRESS ── */
+.upload-progress{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;margin-top:10px}
+.upload-bar-wrap{height:6px;background:var(--border);border-radius:3px;overflow:hidden;margin-top:8px}
+.upload-bar-fill{height:100%;background:var(--accent);border-radius:3px;transition:width .3s}
+
+/* ── PERMISSION REQUEST BADGE ── */
+.req-badge{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;background:var(--red);color:#fff;border-radius:50%;font-size:10px;font-weight:700;margin-right:4px}
+
+/* ── ASSISTANT ROLE BADGE ── */
+.role-pill{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.04em}
+.role-pill.owner{background:rgba(184,134,11,.15);color:var(--gold);border:1px solid rgba(184,134,11,.3)}
+.role-pill.assistant{background:var(--purple-bg);color:var(--purple);border:1px solid #c8b0f0}
+
+/* ── PERM TOGGLE ── */
+.perm-toggle-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)}
+.perm-toggle-row:last-child{border-bottom:none}
+.perm-toggle-label{font-size:13px;color:var(--ink)}
+.toggle-switch{position:relative;width:38px;height:20px;flex-shrink:0}
+.toggle-switch input{opacity:0;width:0;height:0}
+.toggle-track{position:absolute;inset:0;background:var(--border2);border-radius:10px;cursor:pointer;transition:.2s}
+.toggle-track::before{content:'';position:absolute;width:14px;height:14px;background:#fff;border-radius:50%;left:3px;top:3px;transition:.2s}
+.toggle-switch input:checked+.toggle-track{background:var(--green)}
+.toggle-switch input:checked+.toggle-track::before{left:21px}
 </style>
 </head>
 <body>
@@ -184,7 +228,7 @@ select.form-input{cursor:pointer}
 <aside class="sidebar">
   <div class="sidebar-logo">
     <div class="logo-emblem-sm">🎓</div>
-    <div><div class="logo-text">منصة SMT</div><div class="logo-sub">لوحة المدرس</div></div>
+    <div><div class="logo-text" id="app-name-ar"></div><div class="logo-sub">لوحة المدرس</div></div>
   </div>
   <nav class="nav">
     <div class="nav-section">الرئيسية</div>
@@ -202,6 +246,7 @@ select.form-input{cursor:pointer}
     <div class="nav-section">الإعدادات</div>
     <a class="nav-item" data-page="groups"   onclick="showPage('groups',this)"><span class="nav-icon">🏫</span>المجموعات</a>
     <a class="nav-item" data-page="settings" onclick="showPage('settings',this)"><span class="nav-icon">⚙️</span>الإعدادات</a>
+    <a class="nav-item owner-only" data-page="assistants" onclick="showPage('assistants',this)"><span class="nav-icon">👨‍💼</span>المساعدون<span class="nav-badge red" id="nb-requests"></span></a>
   </nav>
   <div class="sidebar-bottom">
     <div class="user-mini">
@@ -328,7 +373,7 @@ select.form-input{cursor:pointer}
         <div class="card-body">
           <div style="margin-bottom:12px;font-size:13px;color:var(--text2)">أدخل الـ Student ID لتحضير الطالب بدون كود الحصة</div>
           <div style="display:flex;gap:8px;margin-bottom:14px">
-            <input type="text" id="lesson-att-id" class="form-input" placeholder="SMT-001" style="max-width:180px;text-transform:uppercase">
+            <input type="text" id="lesson-att-id" class="form-input" id="lesson-att-id-ph" style="max-width:180px;text-transform:uppercase">
             <button class="btn btn-primary" onclick="markLessonAttById()">✅ تحضير</button>
           </div>
           <div id="lesson-att-list" style="display:flex;flex-wrap:wrap;gap:6px"></div>
@@ -388,6 +433,50 @@ select.form-input{cursor:pointer}
             <div class="form-group"><label class="form-label">كلمة المرور الجديدة</label><input type="password" id="set-pass" class="form-input"></div>
             <div class="form-group"><label class="form-label">تأكيد</label><input type="password" id="set-pass2" class="form-input"></div>
             <button class="btn btn-ghost" onclick="changePass()">تغيير كلمة المرور</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+    <!-- ASSISTANTS PAGE -->
+    <div id="page-assistants" class="hidden">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+        <!-- Add Assistant -->
+        <div class="card">
+          <div class="card-header"><span class="card-title">➕ إضافة مساعد</span></div>
+          <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
+            <div class="form-group"><label class="form-label">البريد الإلكتروني *</label><input type="email" id="asst-email" class="form-input" placeholder="assistant@school.com"></div>
+            <div class="form-group"><label class="form-label">الاسم *</label><input type="text" id="asst-name" class="form-input" placeholder="اسم المساعد"></div>
+            <div class="form-group"><label class="form-label">كلمة المرور *</label><input type="password" id="asst-pass" class="form-input" placeholder="••••••••"></div>
+            <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px">
+              <div style="font-size:12px;font-weight:700;color:var(--ink);margin-bottom:10px">الصلاحيات الافتراضية</div>
+              <div id="default-perms">
+                <div class="perm-toggle-row"><span class="perm-toggle-label">📅 الحضور</span><label class="toggle-switch"><input type="checkbox" id="dp-attendance" checked><span class="toggle-track"></span></label></div>
+                <div class="perm-toggle-row"><span class="perm-toggle-label">📝 الدرجات</span><label class="toggle-switch"><input type="checkbox" id="dp-grades" checked><span class="toggle-track"></span></label></div>
+                <div class="perm-toggle-row"><span class="perm-toggle-label">📚 الواجبات</span><label class="toggle-switch"><input type="checkbox" id="dp-assignments" checked><span class="toggle-track"></span></label></div>
+                <div class="perm-toggle-row"><span class="perm-toggle-label">🧪 الامتحانات</span><label class="toggle-switch"><input type="checkbox" id="dp-exams" checked><span class="toggle-track"></span></label></div>
+                <div class="perm-toggle-row"><span class="perm-toggle-label">🎬 الحصص</span><label class="toggle-switch"><input type="checkbox" id="dp-lessons" checked><span class="toggle-track"></span></label></div>
+                <div class="perm-toggle-row"><span class="perm-toggle-label">👥 إدارة الطلاب</span><label class="toggle-switch"><input type="checkbox" id="dp-students"><span class="toggle-track"></span></label></div>
+                <div class="perm-toggle-row"><span class="perm-toggle-label">🏫 المجموعات</span><label class="toggle-switch"><input type="checkbox" id="dp-groups"><span class="toggle-track"></span></label></div>
+                <div class="perm-toggle-row"><span class="perm-toggle-label">🔔 الإشعارات</span><label class="toggle-switch"><input type="checkbox" id="dp-notifications" checked><span class="toggle-track"></span></label></div>
+              </div>
+            </div>
+            <button class="btn btn-primary" id="add-asst-btn" onclick="addAssistant()">➕ إضافة المساعد</button>
+          </div>
+        </div>
+        <!-- Lists -->
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <!-- Assistants List -->
+          <div class="card">
+            <div class="card-header"><span class="card-title">👨‍💼 المساعدون الحاليون</span></div>
+            <div id="assistants-list"><div class="empty-state"><div class="icon">👨‍💼</div><div class="msg">لا يوجد مساعدون</div></div></div>
+          </div>
+          <!-- Permission Requests -->
+          <div class="card">
+            <div class="card-header"><span class="card-title">📋 طلبات الصلاحيات</span><span class="nav-badge red" id="req-count-badge"></span></div>
+            <div id="perm-requests-list"><div class="empty-state"><div class="icon">📋</div><div class="msg">لا توجد طلبات</div></div></div>
           </div>
         </div>
       </div>
@@ -488,9 +577,32 @@ select.form-input{cursor:pointer}
       <div class="form-group"><label class="form-label">عنوان الحصة *</label><input type="text" id="nl-title" class="form-input" placeholder="الدرس الأول - المقدمة"></div>
       <div class="form-group"><label class="form-label">الوصف</label><textarea id="nl-desc" class="form-input" rows="2"></textarea></div>
       <div class="form-group"><label class="form-label">المجموعة *</label><select id="nl-group" class="form-input"><option value="">اختر مجموعة</option></select></div>
-      <div class="form-group"><label class="form-label">رابط الفيديو *</label><input type="url" id="nl-url" class="form-input" placeholder="https://youtube.com/watch?v=..."></div>
       <div class="form-group"><label class="form-label">تاريخ الحصة</label><input type="date" id="nl-date" class="form-input"></div>
-      <div class="warn-note">🔑 سيتم توليد كود one-time تلقائياً عند الإنشاء</div>
+      <!-- Video Source Tabs -->
+      <div class="form-group">
+        <label class="form-label">مصدر الفيديو *</label>
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          <button type="button" class="btn btn-primary btn-sm" id="src-yt-btn" onclick="switchVideoSrc('youtube')">🎬 YouTube</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="src-up-btn" onclick="switchVideoSrc('upload')">📁 رفع ملف</button>
+        </div>
+        <div id="src-youtube"><input type="url" id="nl-url" class="form-input" placeholder="https://youtube.com/watch?v=..."></div>
+        <div id="src-upload" class="hidden">
+          <input type="file" id="nl-file" class="form-input" accept="video/*" onchange="previewFile(this)">
+          <div id="upload-progress-wrap" class="upload-progress hidden">
+            <div style="font-size:12px;color:var(--text2)" id="upload-status">جار الرفع...</div>
+            <div class="upload-bar-wrap"><div class="upload-bar-fill" id="upload-bar" style="width:0%"></div></div>
+          </div>
+        </div>
+      </div>
+      <!-- Require Code Toggle -->
+      <div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px">
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--ink)">🔑 تفعيل بكود</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">الطالب يحتاج كود للوصول للحصة</div>
+        </div>
+        <label class="toggle-switch"><input type="checkbox" id="nl-require-code"><span class="toggle-track"></span></label>
+      </div>
+      <div id="nl-code-note" class="warn-note" style="margin-top:10px">🔑 سيتم توليد كود one-time تلقائياً عند الإنشاء</div>
     </div>
     <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('add-lesson-modal')">إلغاء</button><button class="btn btn-primary" id="add-lesson-btn" onclick="addLesson()">🎬 إنشاء</button></div>
   </div>
@@ -508,6 +620,29 @@ select.form-input{cursor:pointer}
   </div>
 </div>
 
+<!-- Edit Assistant Permissions Modal -->
+<div class="modal-overlay" id="edit-asst-modal">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">🔧 تعديل صلاحيات المساعد</span><button class="modal-close" onclick="closeModal('edit-asst-modal')">✕</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="ea-uid">
+      <div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:14px" id="ea-name"></div>
+      <div class="perm-toggle-row"><span class="perm-toggle-label">📅 الحضور</span><label class="toggle-switch"><input type="checkbox" id="ea-attendance"><span class="toggle-track"></span></label></div>
+      <div class="perm-toggle-row"><span class="perm-toggle-label">📝 الدرجات</span><label class="toggle-switch"><input type="checkbox" id="ea-grades"><span class="toggle-track"></span></label></div>
+      <div class="perm-toggle-row"><span class="perm-toggle-label">📚 الواجبات</span><label class="toggle-switch"><input type="checkbox" id="ea-assignments"><span class="toggle-track"></span></label></div>
+      <div class="perm-toggle-row"><span class="perm-toggle-label">🧪 الامتحانات</span><label class="toggle-switch"><input type="checkbox" id="ea-exams"><span class="toggle-track"></span></label></div>
+      <div class="perm-toggle-row"><span class="perm-toggle-label">🎬 الحصص</span><label class="toggle-switch"><input type="checkbox" id="ea-lessons"><span class="toggle-track"></span></label></div>
+      <div class="perm-toggle-row"><span class="perm-toggle-label">👥 إدارة الطلاب</span><label class="toggle-switch"><input type="checkbox" id="ea-students"><span class="toggle-track"></span></label></div>
+      <div class="perm-toggle-row"><span class="perm-toggle-label">🏫 المجموعات</span><label class="toggle-switch"><input type="checkbox" id="ea-groups"><span class="toggle-track"></span></label></div>
+      <div class="perm-toggle-row"><span class="perm-toggle-label">🔔 الإشعارات</span><label class="toggle-switch"><input type="checkbox" id="ea-notifications"><span class="toggle-track"></span></label></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('edit-asst-modal')">إلغاء</button>
+      <button class="btn btn-primary" onclick="saveAsstPerms()">💾 حفظ</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="student-detail-modal">
   <div class="modal" style="max-width:580px">
     <div class="modal-header"><span class="modal-title" id="sd-title">تفاصيل الطالب</span><button class="modal-close" onclick="closeModal('student-detail-modal')">✕</button></div>
@@ -515,29 +650,25 @@ select.form-input{cursor:pointer}
   </div>
 </div>
 
+<script src="config.js"></script>
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import{getAuth,signOut,onAuthStateChanged,updatePassword,createUserWithEmailAndPassword,sendPasswordResetEmail}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import{getFirestore,collection,doc,getDoc,getDocs,addDoc,setDoc,updateDoc,deleteDoc,query,where,orderBy,limit,onSnapshot,serverTimestamp,increment,writeBatch}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import{getStorage,ref,uploadBytesResumable,getDownloadURL}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
 // ════════════════════════════════════════
 //  🔥 FIREBASE CONFIG — ضع قيمك هنا
 // ════════════════════════════════════════
-const firebaseConfig = {
-  apiKey:            "AIzaSyDaqELq9wH5ewLLbO7KE0du04uJmd_ndl4",
-  authDomain:        "edu-plateform-mwl.firebaseapp.com",
-  projectId:         "edu-plateform-mwl",
-  storageBucket:     "edu-plateform-mwl.firebasestorage.app",
-  messagingSenderId: "484666536360",
-  appId:             "1:484666536360:web:aae1837e5a749a4c53ed9d",
-  measurementId:     "G-2GB1SGD06E"
-};
+const firebaseConfig = APP_CONFIG.firebase;
 // ════════════════════════════════════════
 
 // App الرئيسي للمدرس
 const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db   = getFirestore(app);
+
+const storage = getStorage(app);
 
 // App ثاني لإنشاء الطلاب بدون تأثير على جلسة المدرس
 const secondaryApp  = initializeApp(firebaseConfig, 'secondary');
@@ -549,9 +680,9 @@ const secondaryAuth = getAuth(secondaryApp);
 const UserService = {
   async generateStudentId() {
     const snap = await getDocs(query(collection(db,'users'), where('role','==','student'), orderBy('studentId','desc'), limit(1)));
-    if (snap.empty) return 'SMT-001';
-    const last = snap.docs[0].data().studentId || 'SMT-000';
-    return 'SMT-' + String(parseInt(last.replace('SMT-','')) + 1).padStart(3,'0');
+    if (snap.empty) return APP_CONFIG.student_id_prefix + '-001';
+    const last = snap.docs[0].data().studentId || (APP_CONFIG.student_id_prefix + '-000');
+    return APP_CONFIG.student_id_prefix + '-' + String(parseInt(last.replace(APP_CONFIG.student_id_prefix + '-','')) + 1).padStart(3,'0');
   },
   async createStudent(email, password, userData) {
     // إنشاء Auth بالـ secondary app عشان ما يأثرش على جلسة المدرس
@@ -698,6 +829,15 @@ onAuthStateChanged(auth, async user => {
   const snap = await getDoc(doc(db,'users',user.uid));
   if (!snap.exists() || snap.data().role==='student') { window.location.href='student.html'; return; }
   currentUser = {uid:user.uid,...snap.data()};
+  // Apply config to UI
+  document.getElementById('app-name-ar').textContent = APP_CONFIG.name_ar;
+  document.getElementById('app-title').textContent   = APP_CONFIG.name_ar + ' — لوحة المدرس';
+  const attIdPh = document.getElementById('lesson-att-id-ph');
+  if (attIdPh) attIdPh.placeholder = APP_CONFIG.student_id_prefix + '-001';
+  // Set default requireCode from config
+  const reqCodeEl = document.getElementById('nl-require-code');
+  if (reqCodeEl) reqCodeEl.checked = APP_CONFIG.default_lesson_require_code;
+
   document.getElementById('sb-name').textContent  = currentUser.name||currentUser.email;
   document.getElementById('sb-avatar').textContent = (currentUser.name||'أ')[0].toUpperCase();
   document.getElementById('set-name').value  = currentUser.name||'';
@@ -705,6 +845,14 @@ onAuthStateChanged(auth, async user => {
   await loadGroups();
   loadDashboard();
   listenNotifs();
+  // Show/hide owner-only elements
+  document.querySelectorAll('.owner-only').forEach(el => {
+    el.style.display = currentUser.role === 'owner' ? '' : 'none';
+  });
+  // Start auto logout timer
+  window._startAutoLogout?.();
+  // Listen for permission requests (owner only)
+  if (currentUser.role === 'owner') listenPermRequests();
 });
 
 window.doLogout = () => signOut(auth).then(() => window.location.href='index.html');
@@ -720,6 +868,7 @@ window.showPage = function(page, btn) {
   document.getElementById('topbar-title').textContent = titles[page]||page;
   currentPage = page;
   if(page==='students')      loadStudents();
+  if(page==='assistants')    { loadAssistants(); loadPermRequests(); }
   if(page==='attendance')    setTodayDate();
   if(page==='exams')         loadExams();
   if(page==='assignments')   loadAssignments();
@@ -735,9 +884,39 @@ window.topbarAction = function() {
 // GROUPS
 async function loadGroups() { allGroups=await GroupService.getGroups(); populateGroupSelects(); renderGroups(); }
 function populateGroupSelects() {
-  const ids=['filter-group-students','att-group','grade-group','ne-group','na-group','nl-group','sn-group','assign-group','exam-group-filter','analytics-group','lesson-group-filter'];
-  ids.forEach(id => { const el=document.getElementById(id); if(!el) return; const first=el.options[0]; el.innerHTML=''; if(first) el.appendChild(first); allGroups.forEach(g => { const o=document.createElement('option'); o.value=g.id; o.textContent=g.name; el.appendChild(o); }); });
-  const esG=document.getElementById('es-group'); if(esG) { esG.innerHTML='<option value="">بدون مجموعة</option>'; allGroups.forEach(g => { esG.innerHTML+=`<option value="${g.id}">${g.name}</option>`; }); }
+  const defs = {
+    'filter-group-students': 'كل المجموعات',
+    'att-group':             'اختر مجموعة',
+    'grade-group':           'اختر مجموعة',
+    'ne-group':              'اختر',
+    'na-group':              'اختر',
+    'nl-group':              'اختر مجموعة',
+    'sn-group':              'كل الطلاب',
+    'assign-group':          'كل المجموعات',
+    'exam-group-filter':     'كل المجموعات',
+    'analytics-group':       'اختر مجموعة',
+    'lesson-group-filter':   'كل المجموعات',
+    'ns-group':              'اختر مجموعة',
+  };
+  Object.entries(defs).forEach(([id, placeholder]) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const currentVal = el.value;
+    el.innerHTML = `<option value="">${placeholder}</option>`;
+    allGroups.forEach(g => {
+      const o = document.createElement('option');
+      o.value = g.id; o.textContent = g.name;
+      el.appendChild(o);
+    });
+    if (currentVal) el.value = currentVal;
+  });
+  const esG = document.getElementById('es-group');
+  if (esG) {
+    const currentVal = esG.value;
+    esG.innerHTML = '<option value="">بدون مجموعة</option>';
+    allGroups.forEach(g => { esG.innerHTML += `<option value="${g.id}">${g.name}</option>`; });
+    if (currentVal) esG.value = currentVal;
+  }
 }
 function renderGroups() {
   const grid=document.getElementById('groups-grid'); if(!grid) return;
@@ -1055,6 +1234,430 @@ window.globalSearch=function(q){q=(q||'').trim();if(!q)return;const filtered=all
 window.exportCSV=async function(){if(!allStudents.length){Utils.toast('لا يوجد طلاب','warning');return}Utils.toast('جار التصدير...','info');const [gradesArr,attArr]=await Promise.all([Promise.all(allStudents.map(s=>GradeService.getStudentGrades(s.uid))),Promise.all(allStudents.map(s=>AttendanceService.getAttendanceRate(s.uid)))]);
   const rows=[['الاسم','Student ID','الهاتف','البريد','المجموعة','متوسط الدرجات','معدل الحضور','عدد الامتحانات','الحالة']];allStudents.forEach((s,i)=>{const g=allGroups.find(x=>x.id===s.groupId);const avg=gradesArr[i].length?GradeService.calcAverage(gradesArr[i]):0;rows.push([s.name||'',s.studentId||'',s.phone||'',s.email||'',g?.name||'',avg+'%',attArr[i].rate+'%',gradesArr[i].length,s.isActive?'نشط':'موقوف'])});
   const csv=rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'})),download:'students_'+new Date().toISOString().split('T')[0]+'.csv'});a.click();Utils.toast('تم التصدير ✅','success')};
+
+
+// ══════════════════════════════════════
+//  PERMISSION SYSTEM
+// ══════════════════════════════════════
+
+// All permissions keys
+const ALL_PERMS = ['attendance','grades','assignments','exams','lessons','students','groups','notifications'];
+
+// Check if current user has a permission
+function hasPerm(perm) {
+  if (!currentUser) return false;
+  if (currentUser.role === 'owner') return true; // owner has all
+  if (currentUser.role === 'assistant') {
+    return currentUser.permissions?.[perm] === true;
+  }
+  return false;
+}
+
+// Guard function — call before any sensitive action
+// Returns true if allowed, false + shows popup if not
+function requirePerm(perm, permLabel) {
+  if (hasPerm(perm)) return true;
+  showPermPopup(perm, permLabel);
+  return false;
+}
+
+function showPermPopup(perm, permLabel) {
+  // Remove existing popup
+  document.getElementById('perm-popup')?.remove();
+  const popup = document.createElement('div');
+  popup.id = 'perm-popup';
+  popup.className = 'perm-popup';
+  popup.innerHTML = `
+    <div class="perm-box">
+      <div class="perm-icon">🔒</div>
+      <div class="perm-title">ليس لديك صلاحية</div>
+      <div class="perm-msg">أنت لا تملك صلاحية <strong>${permLabel}</strong>.<br>يمكنك إرسال طلب للمدرس لمنحك هذه الصلاحية.</div>
+      <div class="perm-actions">
+        <button class="btn btn-ghost" onclick="document.getElementById('perm-popup').remove()">إغلاق</button>
+        <button class="btn btn-primary" onclick="requestPerm('${perm}','${permLabel}')">📨 طلب الصلاحية</button>
+      </div>
+    </div>`;
+  document.body.appendChild(popup);
+}
+
+window.requestPerm = async function(perm, permLabel) {
+  document.getElementById('perm-popup')?.remove();
+  try {
+    // Find owner
+    const q = query(collection(db,'users'), where('role','==','owner'), limit(1));
+    const snap = await getDocs(q);
+    if (snap.empty) { Utils.toast('لا يوجد مالك للنظام','error'); return; }
+    const ownerId = snap.docs[0].id;
+    // Check if request already sent
+    const existing = await getDocs(query(collection(db,'permission_requests'),
+      where('fromUid','==',currentUser.uid),
+      where('permission','==',perm),
+      where('status','==','pending')));
+    if (!existing.empty) { Utils.toast('تم إرسال الطلب مسبقاً — انتظر رد المدرس','warning'); return; }
+    await addDoc(collection(db,'permission_requests'), {
+      fromUid: currentUser.uid,
+      fromName: currentUser.name||'مساعد',
+      toUid: ownerId,
+      permission: perm,
+      permissionLabel: permLabel,
+      status: 'pending',
+      createdAt: serverTimestamp()
+    });
+    Utils.toast('تم إرسال طلب الصلاحية ✅','success');
+  } catch(e) { Utils.toast('خطأ في إرسال الطلب','error'); }
+};
+
+// ══════════════════════════════════════
+//  ASSISTANTS MANAGEMENT
+// ══════════════════════════════════════
+
+window.addAssistant = async function() {
+  const email = document.getElementById('asst-email').value.trim();
+  const name  = document.getElementById('asst-name').value.trim();
+  const pass  = document.getElementById('asst-pass').value;
+  if (!email||!name||!pass) { Utils.toast('جميع الحقول مطلوبة','error'); return; }
+  if (pass.length < 6) { Utils.toast('كلمة المرور 6 أحرف على الأقل','error'); return; }
+  const permissions = {
+    attendance:    document.getElementById('dp-attendance').checked,
+    grades:        document.getElementById('dp-grades').checked,
+    assignments:   document.getElementById('dp-assignments').checked,
+    exams:         document.getElementById('dp-exams').checked,
+    lessons:       document.getElementById('dp-lessons').checked,
+    students:      document.getElementById('dp-students').checked,
+    groups:        document.getElementById('dp-groups').checked,
+    notifications: document.getElementById('dp-notifications').checked,
+  };
+  const btn = document.getElementById('add-asst-btn');
+  btn.disabled = true; btn.textContent = 'جار الإضافة...';
+  try {
+    const cred = await createUserWithEmailAndPassword(secondaryAuth, email, pass);
+    await signOut(secondaryAuth);
+    await setDoc(doc(db,'users',cred.user.uid), {
+      name, email, role:'assistant', permissions,
+      ownerUid: currentUser.uid, isActive:true, createdAt:serverTimestamp()
+    });
+    Utils.toast('تم إضافة المساعد ✅','success');
+    ['asst-email','asst-name','asst-pass'].forEach(id=>document.getElementById(id).value='');
+    loadAssistants();
+  } catch(e) {
+    const msgs={'auth/email-already-in-use':'البريد مستخدم','auth/weak-password':'كلمة المرور ضعيفة'};
+    Utils.toast(msgs[e.code]||e.message,'error');
+  } finally { btn.disabled=false; btn.textContent='➕ إضافة المساعد'; }
+};
+
+async function loadAssistants() {
+  const q = query(collection(db,'users'), where('role','==','assistant'), where('ownerUid','==',currentUser.uid));
+  const snap = await getDocs(q);
+  const assistants = snap.docs.map(d=>({uid:d.id,...d.data()}));
+  const el = document.getElementById('assistants-list');
+  if (!el) return;
+  el.innerHTML = assistants.map(a => {
+    const perms = ALL_PERMS.filter(p=>a.permissions?.[p]);
+    const permLabels = {attendance:'حضور',grades:'درجات',assignments:'واجبات',exams:'امتحانات',lessons:'حصص',students:'طلاب',groups:'مجموعات',notifications:'إشعارات'};
+    return `<div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px">
+      <div class="avatar" style="background:${Utils.avatarBg(a.name)}">${(a.name||'م')[0]}</div>
+      <div style="flex:1">
+        <div style="font-weight:700;font-size:13px;color:var(--ink)">${a.name} <span class="role-pill assistant">مساعد</span></div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">${a.email}</div>
+        <div style="margin-top:5px;display:flex;flex-wrap:wrap;gap:4px">
+          ${perms.map(p=>`<span class="badge badge-green" style="font-size:10px">${permLabels[p]}</span>`).join('')}
+          ${!perms.length?'<span class="badge badge-red" style="font-size:10px">لا صلاحيات</span>':''}
+        </div>
+      </div>
+      <div style="display:flex;gap:5px">
+        <button class="btn btn-ghost btn-sm" onclick="openEditAsst('${a.uid}')">🔧 تعديل</button>
+        <button class="btn btn-danger btn-sm" onclick="deactivateAsst('${a.uid}')">🚫 إيقاف</button>
+      </div>
+    </div>`;
+  }).join('') || '<div class="empty-state"><div class="icon">👨‍💼</div><div class="msg">لا يوجد مساعدون</div></div>';
+}
+
+window.openEditAsst = async function(uid) {
+  const s = await UserService.getUser(uid);
+  if (!s) return;
+  document.getElementById('ea-uid').value = uid;
+  document.getElementById('ea-name').textContent = s.name||'مساعد';
+  ALL_PERMS.forEach(p => {
+    const el = document.getElementById(`ea-${p}`);
+    if (el) el.checked = s.permissions?.[p]||false;
+  });
+  openModal('edit-asst-modal');
+};
+
+window.saveAsstPerms = async function() {
+  const uid = document.getElementById('ea-uid').value;
+  const permissions = {};
+  ALL_PERMS.forEach(p => {
+    const el = document.getElementById(`ea-${p}`);
+    if (el) permissions[p] = el.checked;
+  });
+  await UserService.updateUser(uid, {permissions});
+  Utils.toast('تم حفظ الصلاحيات ✅','success');
+  closeModal('edit-asst-modal');
+  loadAssistants();
+};
+
+window.deactivateAsst = async function(uid) {
+  if (!confirm('إيقاف المساعد؟')) return;
+  await UserService.updateUser(uid, {isActive:false});
+  Utils.toast('تم الإيقاف','success');
+  loadAssistants();
+};
+
+// ══════════════════════════════════════
+//  PERMISSION REQUESTS
+// ══════════════════════════════════════
+
+async function loadPermRequests() {
+  if (currentUser?.role !== 'owner') return;
+  const q = query(collection(db,'permission_requests'),
+    where('toUid','==',currentUser.uid),
+    where('status','==','pending'),
+    orderBy('createdAt','desc'));
+  const snap = await getDocs(q);
+  const requests = snap.docs.map(d=>({id:d.id,...d.data()}));
+  const count = requests.length;
+  // Update badges
+  document.getElementById('nb-requests').textContent = count||'';
+  document.getElementById('req-count-badge').textContent = count||'';
+  const el = document.getElementById('perm-requests-list');
+  if (!el) return;
+  const permLabels={attendance:'الحضور',grades:'الدرجات',assignments:'الواجبات',exams:'الامتحانات',lessons:'الحصص',students:'إدارة الطلاب',groups:'المجموعات',notifications:'الإشعارات'};
+  el.innerHTML = requests.map(r => `
+    <div style="padding:13px 18px;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <span style="font-size:13px;font-weight:700;color:var(--ink)">${r.fromName}</span>
+        <span style="font-size:11px;color:var(--muted)">${Utils.timeAgo(r.createdAt)}</span>
+      </div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:10px">يطلب صلاحية: <strong>${permLabels[r.permission]||r.permission}</strong></div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-success btn-sm" onclick="respondPermRequest('${r.id}','${r.fromUid}','${r.permission}','approved')">✅ قبول</button>
+        <button class="btn btn-danger btn-sm"  onclick="respondPermRequest('${r.id}','${r.fromUid}','${r.permission}','rejected')">❌ رفض</button>
+      </div>
+    </div>`).join('') || '<div class="empty-state"><div class="icon">📋</div><div class="msg">لا توجد طلبات معلقة</div></div>';
+}
+
+window.respondPermRequest = async function(reqId, fromUid, perm, status) {
+  try {
+    await updateDoc(doc(db,'permission_requests',reqId), {status, respondedAt:serverTimestamp()});
+    if (status === 'approved') {
+      const asst = await UserService.getUser(fromUid);
+      const perms = {...(asst?.permissions||{}), [perm]:true};
+      await UserService.updateUser(fromUid, {permissions:perms});
+      // Notify assistant
+      await addDoc(collection(db,'notifications'), {
+        toUid:fromUid, type:'info',
+        message:`✅ تم قبول طلبك للحصول على صلاحية: ${perm}`,
+        isRead:false, createdAt:serverTimestamp()
+      });
+    }
+    Utils.toast(status==='approved'?'تم قبول الطلب ✅':'تم رفض الطلب','success');
+    loadPermRequests();
+    loadAssistants();
+  } catch { Utils.toast('خطأ','error'); }
+};
+
+// Listen for new requests in real-time
+function listenPermRequests() {
+  if (currentUser?.role !== 'owner') return;
+  const q = query(collection(db,'permission_requests'),
+    where('toUid','==',currentUser.uid),
+    where('status','==','pending'));
+  return onSnapshot(q, snap => {
+    const count = snap.size;
+    document.getElementById('nb-requests').textContent = count||'';
+    document.getElementById('req-count-badge').textContent = count||'';
+  });
+}
+
+// ══════════════════════════════════════
+//  VIDEO SOURCE SWITCHER
+// ══════════════════════════════════════
+window.switchVideoSrc = function(src) {
+  const isYt = src === 'youtube';
+  document.getElementById('src-youtube').classList.toggle('hidden', !isYt);
+  document.getElementById('src-upload').classList.toggle('hidden', isYt);
+  document.getElementById('src-yt-btn').className = isYt ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm';
+  document.getElementById('src-up-btn').className = !isYt ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm';
+};
+
+// require code toggle note
+document.addEventListener('DOMContentLoaded', () => {
+  const codeToggle = document.getElementById('nl-require-code');
+  const codeNote   = document.getElementById('nl-code-note');
+  if (codeToggle && codeNote) {
+    codeToggle.addEventListener('change', () => {
+      codeNote.style.display = codeToggle.checked ? '' : 'none';
+    });
+  }
+});
+
+window.previewFile = function(input) {
+  if (input.files[0]) {
+    Utils.toast(`ملف محدد: ${input.files[0].name} (${(input.files[0].size/1024/1024).toFixed(1)} MB)`,'info');
+  }
+};
+
+// ══════════════════════════════════════
+//  AUTO LOGOUT — 60 minutes for admin
+// ══════════════════════════════════════
+(function initAutoLogout() {
+  const TIMEOUT_MS  = APP_CONFIG.session.admin_timeout_minutes * 60 * 1000;
+  const WARNING_MS  = (APP_CONFIG.session.admin_timeout_minutes - 1) * 60 * 1000;
+  let logoutTimer, warningTimer, warningBar;
+
+  function resetTimers() {
+    clearTimeout(logoutTimer); clearTimeout(warningTimer);
+    warningBar?.remove(); warningBar = null;
+
+    warningTimer = setTimeout(() => {
+      warningBar = document.createElement('div');
+      warningBar.className = 'autologout-bar';
+      warningBar.innerHTML = `
+        <span class="autologout-txt">⚠️ ستُسجَّل خروجك تلقائياً بعد دقيقة بسبب عدم النشاط</span>
+        <button class="btn btn-ghost btn-sm" onclick="document.querySelector('.autologout-bar')?.remove();resetTimers()">أنا هنا</button>`;
+      document.body.appendChild(warningBar);
+    }, WARNING_MS);
+
+    logoutTimer = setTimeout(async () => {
+      await signOut(auth);
+      window.location.href = 'index.html';
+    }, TIMEOUT_MS);
+  }
+
+  ['mousemove','keydown','click','touchstart','scroll'].forEach(evt =>
+    document.addEventListener(evt, resetTimers, {passive:true})
+  );
+
+  // Start after user is confirmed logged in
+  window._startAutoLogout = resetTimers;
+})();
+
+// ══════════════════════════════════════
+//  UPDATED: addLesson with upload + requireCode
+// ══════════════════════════════════════
+window.addLesson = async function() {
+  if (!requirePerm('lessons','إضافة الحصص')) return;
+  const title       = document.getElementById('nl-title').value.trim();
+  const desc        = document.getElementById('nl-desc').value.trim();
+  const groupId     = document.getElementById('nl-group').value;
+  const date        = document.getElementById('nl-date').value;
+  const requireCode = document.getElementById('nl-require-code').checked;
+  const isUpload    = !document.getElementById('src-youtube').classList.contains('hidden') === false;
+  // Determine video source
+  const isYoutube   = !document.getElementById('src-youtube').classList.contains('hidden');
+
+  if (!title||!groupId) { Utils.toast('العنوان والمجموعة مطلوبة','error'); return; }
+
+  const btn = document.getElementById('add-lesson-btn');
+  btn.disabled = true; btn.textContent = 'جار الإنشاء...';
+
+  try {
+    let videoUrl = '';
+    let videoType = 'youtube';
+
+    if (isYoutube) {
+      videoUrl = document.getElementById('nl-url').value.trim();
+      if (!videoUrl) { Utils.toast('أدخل رابط الفيديو','error'); btn.disabled=false; btn.textContent='🎬 إنشاء'; return; }
+      videoType = 'youtube';
+    } else {
+      const file = document.getElementById('nl-file').files[0];
+      if (!file) { Utils.toast('اختر ملف فيديو','error'); btn.disabled=false; btn.textContent='🎬 إنشاء'; return; }
+      // Upload to Firebase Storage
+      document.getElementById('upload-progress-wrap').classList.remove('hidden');
+      const storageRef = ref(storage, `lessons/${currentUser.uid}/${Date.now()}_${file.name}`);
+      const uploadTask = uploadBytesResumable(storageRef, file);
+      videoUrl = await new Promise((resolve, reject) => {
+        uploadTask.on('state_changed',
+          snap => {
+            const pct = Math.round((snap.bytesTransferred/snap.totalBytes)*100);
+            document.getElementById('upload-bar').style.width = pct + '%';
+            document.getElementById('upload-status').textContent = `جار الرفع... ${pct}%`;
+          },
+          reject,
+          async () => { resolve(await getDownloadURL(uploadTask.snapshot.ref)); }
+        );
+      });
+      document.getElementById('upload-progress-wrap').classList.add('hidden');
+      videoType = 'upload';
+    }
+
+    const lessonData = {
+      title, description:desc, groupId, videoUrl, videoType,
+      date:date||null, teacherId:currentUser.uid, requireCode
+    };
+
+    // Generate code only if required
+    const code = requireCode ? LessonService.generateCode() : null;
+    const ref2 = await addDoc(collection(db,'lessons'), {
+      ...lessonData, code, codeUsed:false, accessList:[], createdAt:serverTimestamp()
+    });
+
+    const students = await UserService.getStudents(groupId);
+    const msg = requireCode
+      ? `حصة جديدة: ${title} — الكود: ${code}`
+      : `حصة جديدة متاحة: ${title}`;
+    await NotifService.sendToGroup(students.map(s=>s.uid), 'info', msg, ref2.id);
+
+    Utils.toast(requireCode ? `تم إنشاء الحصة ✅  الكود: ${code}` : 'تم إنشاء الحصة ✅ (بدون كود)', 'success', 7000);
+    closeModal('add-lesson-modal');
+    ['nl-title','nl-desc','nl-url','nl-date'].forEach(i=>{ const el=document.getElementById(i); if(el) el.value=''; });
+    document.getElementById('nl-group').value='';
+    document.getElementById('nl-require-code').checked = true;
+    switchVideoSrc('youtube');
+    loadLessons();
+  } catch(e) {
+    Utils.toast(e.message||'خطأ في الإنشاء','error');
+  } finally {
+    btn.disabled=false; btn.textContent='🎬 إنشاء';
+  }
+};
+
+// ══════════════════════════════════════
+//  PERM GUARDS on existing actions
+// ══════════════════════════════════════
+// Wrap attendance save
+const _origSaveAtt = window.saveAttendance;
+window.saveAttendance = async function() {
+  if (!requirePerm('attendance','تسجيل الحضور')) return;
+  return _origSaveAtt();
+};
+// Wrap grades save
+const _origSaveGrades = window.saveGrades;
+window.saveGrades = async function() {
+  if (!requirePerm('grades','إدخال الدرجات')) return;
+  return _origSaveGrades();
+};
+// Wrap add assignment
+const _origAddAssign = window.addAssignment;
+window.addAssignment = async function() {
+  if (!requirePerm('assignments','إضافة الواجبات')) return;
+  return _origAddAssign();
+};
+// Wrap add exam
+const _origAddExam = window.addExam;
+window.addExam = async function() {
+  if (!requirePerm('exams','إضافة الامتحانات')) return;
+  return _origAddExam();
+};
+// Wrap add student
+const _origAddStudent = window.addStudent;
+window.addStudent = async function() {
+  if (!requirePerm('students','إضافة الطلاب')) return;
+  return _origAddStudent();
+};
+// Wrap add group
+const _origAddGroup = window.addGroup;
+window.addGroup = async function() {
+  if (!requirePerm('groups','إدارة المجموعات')) return;
+  return _origAddGroup();
+};
+// Wrap send notification
+const _origSendNotif = window.sendNotification;
+window.sendNotification = async function() {
+  if (!requirePerm('notifications','إرسال الإشعارات')) return;
+  return _origSendNotif();
+};
 
 window.addEventListener('online',()=>Utils.toast('عاد الاتصال ✅','success'));
 window.addEventListener('offline',()=>Utils.toast('انقطع الإنترنت ⚠️','warning'));

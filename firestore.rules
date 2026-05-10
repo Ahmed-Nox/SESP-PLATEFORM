@@ -11,10 +11,16 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // هل هو مدرس (admin)؟
+    // هل هو مدرس (owner) أو مساعد (assistant)؟
     function isAdmin() {
+      let role = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+      return isAuth() && (role == 'admin' || role == 'owner' || role == 'assistant');
+    }
+
+    // هل هو owner فقط؟
+    function isOwnerRole() {
       return isAuth() &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'owner';
     }
 
     // هل هو الطالب صاحب الـ doc؟
@@ -33,8 +39,9 @@ service cloud.firestore {
     //  USERS COLLECTION
     // ═══════════════════════════════════════════
     match /users/{userId} {
-      // القراءة: المدرس يقرأ أي مستخدم — الطالب يقرأ بياناته فقط
-      allow read: if isAdmin() || isOwner(userId);
+      // القراءة: المدرس/المساعد يقرأ أي مستخدم — الطالب يقرأ بياناته فقط
+      allow read: if isAdmin() || isOwner(userId) ||
+        (isAuth() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'assistant');
 
       // الكتابة: المدرس يكتب أي مستخدم — الطالب يعدل بياناته فقط (اسم فقط)
       allow create: if isAdmin();
@@ -134,6 +141,19 @@ service cloud.firestore {
           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.groupId == groupId);
       // الكتابة للمدرس فقط (أو client-side analytics update)
       allow write: if isAdmin();
+    }
+
+
+    // ═══════════════════════════════════════════
+    //  PERMISSION REQUESTS COLLECTION
+    // ═══════════════════════════════════════════
+    match /permission_requests/{reqId} {
+      // Assistant يرسل طلب — Owner يقرأ طلباته
+      allow create: if isAuth() && request.resource.data.fromUid == request.auth.uid;
+      allow read:   if isAdmin() ||
+        (isAuth() && (resource.data.fromUid == request.auth.uid || resource.data.toUid == request.auth.uid));
+      allow update: if isAdmin(); // Owner يقبل أو يرفض
+      allow delete: if isAdmin();
     }
 
     // ═══════════════════════════════════════════

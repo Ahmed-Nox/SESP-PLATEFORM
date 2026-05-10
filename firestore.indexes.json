@@ -106,6 +106,33 @@
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     }
+,
+    {
+      "collectionGroup": "permission_requests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "toUid",     "order": "ASCENDING" },
+        { "fieldPath": "status",    "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "permission_requests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "fromUid",   "order": "ASCENDING" },
+        { "fieldPath": "permission","order": "ASCENDING" },
+        { "fieldPath": "status",    "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "users",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "role",     "order": "ASCENDING" },
+        { "fieldPath": "ownerUid", "order": "ASCENDING" }
+      ]
+    }
   ],
   "fieldOverrides": []
 }
