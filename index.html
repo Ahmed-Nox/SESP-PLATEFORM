@@ -63,6 +63,19 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .btn-spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .footer{text-align:center;margin-top:18px;font-size:11px;color:var(--muted);letter-spacing:.03em}
+
+@media (max-width: 480px) {
+  .wrap { max-width: 100%; }
+  .card { padding: 20px 16px; }
+  .logo-ar { font-size: 20px; }
+  .logo-en { font-size: 9px; }
+  .emblem  { width: 56px; height: 56px; font-size: 28px; }
+  .role-grid { gap: 6px; }
+  .role-btn  { padding: 9px 6px; font-size: 12px; }
+  .role-btn .ri { font-size: 20px; }
+  .form-input  { padding: 9px 11px; font-size: 13px; }
+  .btn-login   { font-size: 13px; padding: 11px; }
+}
 </style>
 </head>
 <body>
@@ -118,12 +131,26 @@ onAuthStateChanged(auth, async user => {
   if (!user) return;
   try {
     const snap = await getDoc(doc(db, 'users', user.uid));
-    if (snap.exists()) redirect(snap.data().role);
+    if (snap.exists()) {
+      const role = snap.data().role;
+      if (role === 'owner' || role === 'assistant' || role === 'student') {
+        redirect(role);
+      }
+    }
   } catch {}
 });
 
 function redirect(role) {
-  window.location.href = role === 'admin' ? 'admin.html' : 'student.html';
+  if (role === 'owner' || role === 'assistant') {
+    window.location.href = 'admin.html';
+  } else if (role === 'student') {
+    window.location.href = 'student.html';
+  } else {
+    // Unknown role — logout
+    import("https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js")
+      .then(m => m.signOut(auth));
+    showError('دور المستخدم غير معروف — تواصل مع المدرس');
+  }
 }
 
 // Apply config
@@ -151,8 +178,15 @@ window.doLogin = async function() {
     const snap = await getDoc(doc(db, 'users', cred.user.uid));
     if (!snap.exists()) { showError('الحساب غير موجود في النظام'); setLoading(false); return; }
     const data = snap.data();
-    if (data.role !== selectedRole) {
-      showError(selectedRole === 'admin' ? 'هذا الحساب طالب — اختر طالب' : 'هذا الحساب مدرس — اختر مدرس');
+    // Validate role vs selected button
+    const isAdminRole   = data.role === 'owner' || data.role === 'assistant';
+    const isStudentRole = data.role === 'student';
+    if (selectedRole === 'admin' && !isAdminRole) {
+      showError('هذا الحساب طالب — اختر زر "طالب"');
+      setLoading(false); return;
+    }
+    if (selectedRole === 'student' && !isStudentRole) {
+      showError('هذا الحساب مدرس أو مساعد — اختر زر "مدرس"');
       setLoading(false); return;
     }
     if (data.role === 'student' && data.isActive === false) {

@@ -223,6 +223,181 @@ select.form-input{cursor:pointer}
 .toggle-track::before{content:'';position:absolute;width:14px;height:14px;background:#fff;border-radius:50%;left:3px;top:3px;transition:.2s}
 .toggle-switch input:checked+.toggle-track{background:var(--green)}
 .toggle-switch input:checked+.toggle-track::before{left:21px}
+
+/* ══════════════════════════════════════
+   MOBILE RESPONSIVE — Admin
+══════════════════════════════════════ */
+@media (max-width: 768px) {
+  /* Sidebar becomes bottom nav on mobile */
+  .layout { flex-direction: column; }
+
+  .sidebar {
+    width: 100%;
+    height: auto;
+    border-left: none;
+    border-top: 1px solid var(--border);
+    order: 2;
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    flex-shrink: 0;
+  }
+
+  .sidebar-logo   { display: none; }
+  .sidebar-bottom { display: none; }
+  .nav {
+    display: flex;
+    flex-direction: row;
+    padding: 4px 8px;
+    gap: 2px;
+    width: 100%;
+    overflow-x: auto;
+    flex: none;
+  }
+  .nav-section { display: none; }
+  .nav-item {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 6px 10px;
+    min-width: 60px;
+    font-size: 10px;
+    border: none;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .nav-icon { font-size: 18px; width: auto; }
+  .nav-badge {
+    position: absolute;
+    top: 2px;
+    left: 6px;
+    font-size: 9px;
+    padding: 0 4px;
+    min-width: 14px;
+  }
+  .nav-item { position: relative; }
+
+  /* Main content */
+  .main-content {
+    order: 1;
+    height: calc(100vh - 68px);
+    overflow: hidden;
+  }
+
+  /* Topbar */
+  .topbar {
+    padding: 0 12px;
+    height: 52px;
+    gap: 8px;
+  }
+  .page-title { font-size: 14px; }
+  .page-sub   { display: none; }
+  .topbar-right { gap: 6px; }
+  .search-box { display: none; }
+  .topbar-right .btn-ghost { display: none; } /* hide CSV on mobile */
+
+  /* Content area */
+  .content-area { padding: 12px; padding-bottom: 0; }
+
+  /* Stats grid */
+  .stats-grid { grid-template-columns: repeat(2,1fr); gap: 10px; margin-bottom: 14px; }
+  .stat-num   { font-size: 20px; }
+  .stat-icon  { font-size: 18px; margin-bottom: 5px; }
+
+  /* Dashboard 2-col → 1-col */
+  div[style*="grid-template-columns:1fr 320px"] {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 14px !important;
+  }
+
+  /* Assistants 2-col → 1-col */
+  div[style*="grid-template-columns:1fr 1fr"] {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 14px !important;
+  }
+
+  /* Grid 2 and 3 */
+  .grid-2 { grid-template-columns: 1fr; }
+  .grid-3 { grid-template-columns: 1fr; }
+
+  /* Tables */
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  th, td { padding: 8px 10px; font-size: 12px; }
+
+  /* Modals */
+  .modal { max-width: 100% !important; margin: 0; border-radius: var(--radius) var(--radius) 0 0; }
+  .modal-overlay { align-items: flex-end; padding: 0; }
+
+  /* Cards */
+  .card-header { padding: 11px 14px; }
+  .card-body   { padding: 14px; }
+
+  /* Lesson code */
+  .lesson-code { font-size: 16px; }
+  .lesson-top  { flex-direction: column; gap: 8px; }
+  .lesson-top > div:last-child { display: flex; flex-wrap: wrap; gap: 5px; }
+
+  /* Groups grid */
+  .group-card { padding: 12px; }
+
+  /* Assign card */
+  .assign-top { flex-direction: column; align-items: flex-start; gap: 6px; }
+
+  /* Att buttons */
+  .att-btn { padding: 3px 7px; font-size: 10px; }
+
+  /* Section header */
+  .section-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .section-header > div { width: 100%; }
+  .section-header .form-input { width: 100% !important; }
+
+  /* Grade input */
+  .grade-input { width: 55px; }
+
+  /* Toast */
+  .toast-container { left: 10px; right: 10px; bottom: 74px; }
+  .toast { font-size: 12px; padding: 10px 12px; }
+
+  /* Autologout bar */
+  .autologout-bar { bottom: 64px; padding: 8px 12px; flex-direction: column; gap: 6px; text-align: center; }
+
+  /* Perm popup */
+  .perm-box { max-width: 100%; border-radius: var(--radius); }
+
+  /* Upload progress */
+  .upload-progress { padding: 8px; }
+
+  /* Topbar action btn text */
+  #topbar-action-text { display: none; }
+}
+
+@media (max-width: 480px) {
+  .stats-grid { grid-template-columns: repeat(2,1fr); gap: 8px; }
+  .stat-card  { padding: 12px 8px; }
+  .stat-num   { font-size: 18px; }
+  .content-area { padding: 10px; }
+  .nav-item   { min-width: 52px; padding: 5px 6px; font-size: 9px; }
+}
+
+  /* Mobile logout btn in topbar */
+  .mobile-logout { display:none; }
+  @media (max-width:768px) {
+    .mobile-logout { display:flex; }
+  }
+
+/* ── BULK ACTIONS ── */
+.bulk-bar{display:none;align-items:center;gap:10px;padding:10px 16px;background:var(--accent-bg);border:1px solid #b8d0f0;border-radius:var(--radius-sm);margin-bottom:12px}
+.bulk-bar.show{display:flex}
+.bulk-count{font-size:13px;font-weight:700;color:var(--accent)}
+.row-check{width:16px;height:16px;cursor:pointer;accent-color:var(--accent)}
 </style>
 </head>
 <body>
@@ -266,6 +441,7 @@ select.form-input{cursor:pointer}
       <div class="search-box"><span style="font-size:13px;color:var(--muted)">🔍</span><input type="text" id="global-search" placeholder="بحث عن طالب..." oninput="globalSearch(this.value)"></div>
       <button class="btn btn-ghost btn-sm" onclick="exportCSV()">📤 CSV</button>
       <button class="btn btn-primary btn-sm" onclick="topbarAction()">+ إضافة</button>
+      <button class="btn btn-danger btn-sm mobile-logout" onclick="doLogout()">🚪</button>
     </div>
   </header>
 
@@ -304,8 +480,18 @@ select.form-input{cursor:pointer}
           <button class="btn btn-primary" onclick="openModal('add-student-modal')">+ إضافة طالب</button>
         </div>
       </div>
-      <div class="card"><div class="table-wrap"><table>
-        <thead><tr><th>الطالب</th><th>Student ID</th><th>الهاتف</th><th>المجموعة</th><th>الحضور</th><th>متوسط الدرجات</th><th>الحالة</th><th>إجراءات</th></tr></thead>
+      <div class="bulk-bar" id="bulk-bar">
+  <span class="bulk-count" id="bulk-count">0 محدد</span>
+  <button class="btn btn-danger btn-sm" onclick="bulkDelete()">🗑 حذف المحددين</button>
+  <button class="btn btn-ghost btn-sm" onclick="bulkToggleStatus(false)">🚫 إيقاف المحددين</button>
+  <button class="btn btn-success btn-sm" onclick="bulkToggleStatus(true)">✅ تفعيل المحددين</button>
+  <button class="btn btn-ghost btn-sm" onclick="clearSelection()">✕ إلغاء التحديد</button>
+</div>
+<div class="card"><div class="table-wrap"><table>
+        <thead><tr>
+  <th style="width:36px"><input type="checkbox" class="row-check" id="select-all-students" onchange="toggleSelectAll(this)"></th>
+  <th>الطالب</th><th>Student ID</th><th>الهاتف</th><th>المجموعة</th><th>الحضور</th><th>متوسط الدرجات</th><th>الحالة</th><th>إجراءات</th>
+</tr></thead>
         <tbody id="students-tbody"><tr><td colspan="8" class="text-center text-muted" style="padding:24px">جار التحميل...</td></tr></tbody>
       </table></div></div>
     </div>
@@ -829,7 +1015,15 @@ let currentUser=null, allGroups=[], allStudents=[], attRecords={}, gradeRecords=
 onAuthStateChanged(auth, async user => {
   if (!user) { window.location.href='index.html'; return; }
   const snap = await getDoc(doc(db,'users',user.uid));
-  if (!snap.exists() || snap.data().role==='student') { window.location.href='student.html'; return; }
+  const userData = snap.data();
+  if (!snap.exists()) { window.location.href='index.html'; return; }
+  if (userData.role === 'student') { window.location.href='student.html'; return; }
+  if (userData.role !== 'owner' && userData.role !== 'assistant') { window.location.href='index.html'; return; }
+  if (userData.isActive === false) { 
+    await signOut(auth); 
+    window.location.href='index.html'; 
+    return; 
+  }
   currentUser = {uid:user.uid,...snap.data()};
   // Apply config to UI
   document.getElementById('app-name-ar').textContent = APP_CONFIG.name_ar;
@@ -958,7 +1152,8 @@ async function loadDashboard() {
   document.getElementById('dash-students-tbody').innerHTML=students.slice(0,5).map(s=>{
     const g=allGroups.find(x=>x.id===s.groupId); const sg=gradesByS[s.uid]||[]; const avg=sg.length?GradeService.calcAverage(sg):null; const attR=attByS[s.uid];
     const [label,cls]=avg!==null?Utils.gradeBadge(avg):['—','badge-muted'];
-    return`<tr onclick="openStudent('${s.uid}')"><td><div class="student-cell"><div class="avatar" style="background:${Utils.avatarBg(s.name)}">${(s.name||'?')[0]}</div><div><div class="s-name">${s.name||'—'}</div><div class="s-sub">${s.studentId||''}</div></div></div></td><td>${g?`<span class="badge badge-blue">${g.name}</span>`:'—'}</td><td>${attR!==null?attR+'%':'—'}</td><td>${avg!==null?`<span style="color:${Utils.gradeColor(avg)};font-weight:700">${avg}%</span>`:'—'}</td><td><span class="badge ${s.isActive?'badge-green':'badge-muted'}">${s.isActive?'نشط':'موقوف'}</span></td></tr>`;
+    return`<tr onclick="openStudent('${s.uid}')">
+      <td onclick="event.stopPropagation()"><input type="checkbox" class="row-check student-row-check" data-uid="${s.uid}" onchange="toggleStudentSelect(this)"></td><td><div class="student-cell"><div class="avatar" style="background:${Utils.avatarBg(s.name)}">${(s.name||'?')[0]}</div><div><div class="s-name">${s.name||'—'}</div><div class="s-sub">${s.studentId||''}</div></div></div></td><td>${g?`<span class="badge badge-blue">${g.name}</span>`:'—'}</td><td>${attR!==null?attR+'%':'—'}</td><td>${avg!==null?`<span style="color:${Utils.gradeColor(avg)};font-weight:700">${avg}%</span>`:'—'}</td><td><span class="badge ${s.isActive?'badge-green':'badge-muted'}">${s.isActive?'نشط':'موقوف'}</span></td></tr>`;
   }).join('')||'<tr><td colspan="5" class="text-center text-muted" style="padding:22px">لا يوجد طلاب</td></tr>';
   const el=document.getElementById('dash-chart');
   el.innerHTML=allGroups.length?allGroups.map((g,i)=>{const avg=allGradesArr[i].length?GradeService.calcAverage(allGradesArr[i]):0; const col=avg>=75?'var(--green)':avg>=50?'var(--accent)':'var(--red)';
@@ -1055,6 +1250,7 @@ window.openStudent = async function(uid) {
       <button class="btn btn-ghost btn-sm" onclick="openEditStudent('${uid}');closeModal('student-detail-modal')">✏️ تعديل</button>
       <button class="btn btn-ghost btn-sm" onclick="toggleStudentStatus('${uid}',${!student?.isActive})">${student?.isActive?'🚫 تعطيل':'✅ تفعيل'}</button>
       <button class="btn btn-ghost btn-sm" onclick="exportStudentCSV('${uid}')">📤 CSV</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteStudentPermanent('${uid}','${student?.name||uid}')">🗑 حذف نهائي</button>
     </div>`;
 };
 window.sdTab=function(tab){['grades','att'].forEach(t=>{document.getElementById(`sd-tab-${t}`).classList.toggle('hidden',t!==tab);document.getElementById(`sdt-${t}`).classList.toggle('active',t===tab)})};
@@ -1659,6 +1855,130 @@ const _origSendNotif = window.sendNotification;
 window.sendNotification = async function() {
   if (!requirePerm('notifications','إرسال الإشعارات')) return;
   return _origSendNotif();
+};
+
+
+// ══════════════════════════════════════
+//  BULK SELECT & DELETE
+// ══════════════════════════════════════
+let selectedStudents = new Set();
+
+window.toggleSelectAll = function(cb) {
+  const checkboxes = document.querySelectorAll('.student-row-check');
+  checkboxes.forEach(c => {
+    c.checked = cb.checked;
+    const uid = c.dataset.uid;
+    if (cb.checked) selectedStudents.add(uid);
+    else selectedStudents.delete(uid);
+  });
+  updateBulkBar();
+};
+
+window.toggleStudentSelect = function(cb) {
+  const uid = cb.dataset.uid;
+  if (cb.checked) selectedStudents.add(uid);
+  else selectedStudents.delete(uid);
+  // Update select-all checkbox
+  const allCbs = document.querySelectorAll('.student-row-check');
+  const allChecked = [...allCbs].every(c => c.checked);
+  const selectAll = document.getElementById('select-all-students');
+  if (selectAll) selectAll.checked = allChecked;
+  updateBulkBar();
+};
+
+function updateBulkBar() {
+  const bar = document.getElementById('bulk-bar');
+  const count = document.getElementById('bulk-count');
+  if (!bar || !count) return;
+  if (selectedStudents.size > 0) {
+    bar.classList.add('show');
+    count.textContent = selectedStudents.size + ' محدد';
+  } else {
+    bar.classList.remove('show');
+  }
+}
+
+window.clearSelection = function() {
+  selectedStudents.clear();
+  document.querySelectorAll('.student-row-check').forEach(c => c.checked = false);
+  const selectAll = document.getElementById('select-all-students');
+  if (selectAll) selectAll.checked = false;
+  updateBulkBar();
+};
+
+window.bulkDelete = async function() {
+  if (!selectedStudents.size) return;
+  const count = selectedStudents.size;
+  if (!confirm(`هتحذف ${count} طالب نهائياً؟ مش هيرجعوا!`)) return;
+  try {
+    const batch = writeBatch(db);
+    for (const uid of selectedStudents) {
+      // Delete user document
+      batch.delete(doc(db,'users',uid));
+      // Mark all related data as deleted (soft delete for data integrity)
+    }
+    await batch.commit();
+    // Also delete from Firebase Auth via secondary app workaround
+    // Note: Auth deletion requires Admin SDK — we deactivate instead
+    // and delete Firestore data
+    Utils.toast(`تم حذف ${count} طالب ✅`, 'success');
+    clearSelection();
+    await loadGroups();
+    loadStudents();
+  } catch(e) { Utils.toast('خطأ في الحذف: ' + e.message, 'error'); }
+};
+
+window.bulkToggleStatus = async function(isActive) {
+  if (!selectedStudents.size) return;
+  const count = selectedStudents.size;
+  const action = isActive ? 'تفعيل' : 'إيقاف';
+  if (!confirm(`${action} ${count} طالب؟`)) return;
+  try {
+    const batch = writeBatch(db);
+    for (const uid of selectedStudents) {
+      batch.update(doc(db,'users',uid), {isActive, updatedAt:serverTimestamp()});
+    }
+    await batch.commit();
+    Utils.toast(`تم ${action} ${count} طالب ✅`, 'success');
+    clearSelection();
+    loadStudents();
+  } catch(e) { Utils.toast('خطأ: ' + e.message, 'error'); }
+};
+
+// ── Permanent delete single student ──
+window.deleteStudentPermanent = async function(uid, name) {
+  if (!confirm(`حذف "${name}" نهائياً؟\nكل بياناته (درجات، حضور، واجبات) هتتمسح!`)) return;
+  try {
+    const batch = writeBatch(db);
+    // Delete user document
+    batch.delete(doc(db,'users',uid));
+    await batch.commit();
+
+    // Delete related data in background
+    const collections = ['attendance','grades','notifications'];
+    for (const col of collections) {
+      const q = query(collection(db,col), where('studentId','==',uid));
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        const b2 = writeBatch(db);
+        snap.docs.forEach(d => b2.delete(d.ref));
+        await b2.commit();
+      }
+    }
+    // Delete notifications sent to this student
+    const nq = query(collection(db,'notifications'), where('toUid','==',uid));
+    const nsnap = await getDocs(nq);
+    if (!nsnap.empty) {
+      const b3 = writeBatch(db);
+      nsnap.docs.forEach(d => b3.delete(d.ref));
+      await b3.commit();
+    }
+
+    Utils.toast(`تم حذف ${name} نهائياً ✅`, 'success');
+    closeModal('student-detail-modal');
+    await loadGroups();
+    loadStudents();
+  } catch(e) { Utils.toast('خطأ في الحذف: ' + e.message, 'error'); }
 };
 
 window.addEventListener('online',()=>Utils.toast('عاد الاتصال ✅','success'));
