@@ -962,18 +962,84 @@ const NotifService = {
 };
 
 const LessonService = {
-  generateCode() { const c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let r=''; for(let i=0;i<6;i++) r+=c[Math.floor(Math.random()*c.length)]; return r; },
-  async createLesson(data) { const code=this.generateCode(); const ref=await addDoc(collection(db,'lessons'), {...data, code, codeUsed:false, accessList:[], createdAt:serverTimestamp()}); return {id:ref.id, code}; },
-  async getLessons(groupId=null) { const q=groupId?query(collection(db,'lessons'),where('groupId','==',groupId),orderBy('createdAt','desc')):query(collection(db,'lessons'),orderBy('createdAt','desc')); const s=await getDocs(q); return s.docs.map(d=>({id:d.id,...d.data()})); },
-  async getLesson(id) { const s=await getDoc(doc(db,'lessons',id)); return s.exists()?{id:s.id,...s.data()}:null; },
-  async regenerateCode(id) { const code=this.generateCode(); await updateDoc(doc(db,'lessons',id), {code, codeUsed:false}); return code; },
-  async grantAccess(id, studentId) {
-    const l=await this.getLesson(id); if(!l) throw new Error('الحصة غير موجودة');
-    const list=l.accessList||[];
-    if(!list.includes(studentId)) await updateDoc(doc(db,'lessons',id), {accessList:[...list,studentId]});
+
+  // ── Strong 8-char code: uppercase + lowercase + digits ──
+  generateCode() {
+    const upper  = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+    const lower  = 'abcdefghjkmnpqrstuvwxyz';
+    const digits = '23456789';
+    const all    = upper + lower + digits;
+    let code = '';
+    code += upper [Math.floor(Math.random()*upper.length)];
+    code += lower [Math.floor(Math.random()*lower.length)];
+    code += digits[Math.floor(Math.random()*digits.length)];
+    for (let i=0; i<5; i++) code += all[Math.floor(Math.random()*all.length)];
+    return code.split('').sort(() => Math.random()-.5).join('');
   },
+
+  // ── Check uniqueness in lesson_codes ──
+  async isCodeUnique(code) {
+    const q = query(collection(db,'lesson_codes'), where('code','==',code));
+    const s = await getDocs(q);
+    return s.empty;
+  },
+
+  async generateUniqueCode() {
+    let code, attempts = 0;
+    do {
+      code = this.generateCode();
+      attempts++;
+      if (attempts > 20) break;
+    } while (!(await this.isCodeUnique(code)));
+    return code;
+  },
+
+  async createLesson(data) {
+    const code = await this.generateUniqueCode();
+    const ref  = await addDoc(collection(db,'lessons'), {
+      ...data, code, codeUsed:false, accessList:[], createdAt:serverTimestamp()
+    });
+    // Save code record for tracking
+    await addDoc(collection(db,'lesson_codes'), {
+      code, lessonId:ref.id, groupId:data.groupId,
+      isUsed:false, usedBy:null, createdAt:serverTimestamp()
+    });
+    return { id:ref.id, code };
+  },
+
+  async getLessons(groupId=null) {
+    const q = groupId
+      ? query(collection(db,'lessons'), where('groupId','==',groupId), orderBy('createdAt','desc'))
+      : query(collection(db,'lessons'), orderBy('createdAt','desc'));
+    const s = await getDocs(q);
+    return s.docs.map(d => ({id:d.id,...d.data()}));
+  },
+
+  async getLesson(id) {
+    const s = await getDoc(doc(db,'lessons',id));
+    return s.exists() ? {id:s.id,...s.data()} : null;
+  },
+
+  async regenerateCode(lessonId) {
+    const code = await this.generateUniqueCode();
+    await updateDoc(doc(db,'lessons',lessonId), {code, codeUsed:false});
+    await addDoc(collection(db,'lesson_codes'), {
+      code, lessonId, isUsed:false, usedBy:null, createdAt:serverTimestamp()
+    });
+    return code;
+  },
+
+  async grantAccess(id, studentId) {
+    const l = await this.getLesson(id);
+    if (!l) throw new Error('الحصة غير موجودة');
+    const list = l.accessList||[];
+    if (!list.includes(studentId))
+      await updateDoc(doc(db,'lessons',id), {accessList:[...list,studentId]});
+  },
+
   async deleteLesson(id) { await deleteDoc(doc(db,'lessons',id)); },
 };
+
 
 const AnalyticsService = {
   async updateGroupAnalytics(groupId) {
@@ -1786,10 +1852,17 @@ window.addLesson = async function() {
     };
 
     // Generate code only if required
-    const code = requireCode ? LessonService.generateCode() : null;
+    const code = requireCode ? await LessonService.generateUniqueCode() : null;
     const ref2 = await addDoc(collection(db,'lessons'), {
       ...lessonData, code, codeUsed:false, accessList:[], createdAt:serverTimestamp()
     });
+    // Save code record if requireCode
+    if (requireCode && code) {
+      await addDoc(collection(db,'lesson_codes'), {
+        code, lessonId:ref2.id, groupId:lessonData.groupId,
+        isUsed:false, usedBy:null, createdAt:serverTimestamp()
+      });
+    }
 
     const students = await UserService.getStudents(groupId);
     const msg = requireCode

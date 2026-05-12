@@ -156,6 +156,20 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+
+    // ═══════════════════════════════════════════
+    //  LESSON CODES COLLECTION
+    // ═══════════════════════════════════════════
+    match /lesson_codes/{codeId} {
+      // Admin يقرأ ويكتب — الطالب يقرأ فقط للتحقق
+      allow read:   if isAuth();
+      allow create: if isAdmin();
+      // الطالب يقدر يعدل usedBy/isUsed/usedAt فقط
+      allow update: if isAdmin() ||
+        (isActiveStudent() && onlyUpdatingFields(['isUsed','usedBy','usedAt']));
+      allow delete: if isAdmin();
+    }
+
     // ═══════════════════════════════════════════
     //  HELPER RULE FUNCTIONS
     // ═══════════════════════════════════════════

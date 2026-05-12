@@ -652,8 +652,9 @@ tbody tr:hover{background:var(--surface2)}
         <div class="card">
           <div class="card-header"><span class="card-title">🔒 تغيير كلمة المرور</span></div>
           <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
-            <div class="form-group"><label class="form-label">الجديدة</label><input type="password" id="set-pass" class="form-input" placeholder="••••••••"></div>
-            <div class="form-group"><label class="form-label">تأكيد</label><input type="password" id="set-pass2" class="form-input" placeholder="••••••••"></div>
+            <div class="form-group"><label class="form-label">كلمة المرور الحالية *</label><input type="password" id="set-current-pass" class="form-input" placeholder="••••••••"></div>
+            <div class="form-group"><label class="form-label">كلمة المرور الجديدة *</label><input type="password" id="set-pass" class="form-input" placeholder="••••••••"></div>
+            <div class="form-group"><label class="form-label">تأكيد الجديدة *</label><input type="password" id="set-pass2" class="form-input" placeholder="••••••••"></div>
             <button class="btn btn-ghost" onclick="changePass()">تغيير كلمة المرور</button>
           </div>
         </div>
@@ -722,12 +723,41 @@ const LessonService={
   async getLessonsForGroup(groupId){const q=query(collection(db,'lessons'),where('groupId','==',groupId),orderBy('createdAt','desc'));const s=await getDocs(q);return s.docs.map(d=>({id:d.id,...d.data()}))},
   hasAccess(lesson,uid){return(lesson.accessList||[]).includes(uid)},
   async useCode(lessonId,studentId,code){
-    const snap=await getDoc(doc(db,'lessons',lessonId));if(!snap.exists())throw new Error('الحصة غير موجودة');
+    const codeInput = code.trim(); // keep original case for comparison
+    const snap=await getDoc(doc(db,'lessons',lessonId));
+    if(!snap.exists()) throw new Error('الحصة غير موجودة');
     const lesson={id:snap.id,...snap.data()};
-    if(lesson.code!==code.toUpperCase().trim())throw new Error('الكود غير صحيح ❌');
-    if(lesson.codeUsed&&!this.hasAccess(lesson,studentId))throw new Error('الكود استُخدم بالفعل 🔒');
+
+    // Compare code exactly (case-sensitive, 8-char mixed)
+    if(lesson.code !== codeInput) throw new Error('الكود غير صحيح ❌');
+
+    // Already has access
+    if(this.hasAccess(lesson,studentId)) {
+      return lesson; // just open it
+    }
+
+    // Code already used by someone else
+    if(lesson.codeUsed) throw new Error('الكود استُخدم من قِبل شخص آخر 🔒');
+
+    // Grant access + mark code as used
     const list=lesson.accessList||[];
-    if(!list.includes(studentId))await updateDoc(doc(db,'lessons',lessonId),{codeUsed:true,accessList:[...list,studentId]});
+    await updateDoc(doc(db,'lessons',lessonId),{
+      codeUsed:true,
+      accessList:[...list,studentId]
+    });
+
+    // Update lesson_codes record
+    const codeQuery = query(collection(db,'lesson_codes'),
+      where('lessonId','==',lessonId),
+      where('code','==',codeInput));
+    const codeSnap = await getDocs(codeQuery);
+    if(!codeSnap.empty){
+      await updateDoc(codeSnap.docs[0].ref,{
+        isUsed:true,
+        usedBy:studentId,
+        usedAt:serverTimestamp()
+      });
+    }
     return lesson;
   },
 };
@@ -921,7 +951,7 @@ window.showPage=function(page,btn){
   if(page==='attendance')renderAttendance();
   if(page==='assignments')renderAssignments('all');
   if(page==='exams')renderExams();
-  if(page==='lessons')renderLessons();
+  if(page==='lessons'){ if(currentUser) renderLessons(); }
   if(page==='notifications')renderNotifications();
   if(page==='progress')renderProgress();
 };
@@ -1045,6 +1075,10 @@ window.watchLessonFree = async function(lessonId) {
 };
 
 window.renderLessons=async function(){
+  if(!currentUser){ 
+    document.getElementById('lessons-grid').innerHTML='<div class="empty-state" style="grid-column:1/-1"><div class="icon">⏳</div><div class="msg">جار التحميل...</div></div>';
+    return;
+  }
   if(!currentUser.groupId){document.getElementById('lessons-grid').innerHTML='<div class="empty-state" style="grid-column:1/-1"><div class="icon">🏫</div><div class="msg">لم تُضف لمجموعة بعد</div></div>';return}
   document.getElementById('lessons-grid').innerHTML='<div style="display:flex;justify-content:center;padding:40px;grid-column:1/-1"><div class="spinner"></div></div>';
   const lessons=await LessonService.getLessonsForGroup(currentUser.groupId);
@@ -1082,7 +1116,7 @@ window.openCodeEntry=function(lessonId,title){
     <div style="font-size:13px;color:var(--text2);margin-bottom:16px">أدخل الكود المكون من 6 أحرف الذي حصلت عليه من المدرس لفتح هذه الحصة.</div>
     <div class="code-wrap">
       <div class="code-row">
-        <input id="lesson-code-input" class="code-input" maxlength="6" placeholder="XXXXXX" autocomplete="off">
+        <input id="lesson-code-input" class="code-input" maxlength="8" placeholder="Xx2Yy3Zw" autocomplete="off" style="letter-spacing:.12em">
         <button class="btn btn-primary" id="code-submit-btn" onclick="submitLessonCode('${lessonId}')">🔓 فتح</button>
       </div>
       <div id="code-error" style="margin-top:10px;font-size:12px;color:var(--red)"></div>
@@ -1091,7 +1125,7 @@ window.openCodeEntry=function(lessonId,title){
   openModal('watch-modal');
   setTimeout(()=>document.getElementById('lesson-code-input')?.focus(),200);
   // Enter key support for code input
-  setTimeout(()=>{const inp=document.getElementById('lesson-code-input');if(inp)inp.addEventListener('keydown',e=>{if(e.key==='Enter')window.submitLessonCode(lessonId)})},250);
+  setTimeout(()=>{const inp=document.getElementById('lesson-code-input');if(inp){inp.addEventListener('keydown',e=>{if(e.key==='Enter')window.submitLessonCode(lessonId)})}},250);
 };
 
 window.submitLessonCode=async function(lessonId){
@@ -1169,11 +1203,25 @@ window.saveProfile=async function(){
   Utils.toast('تم الحفظ ✅','success');
 };
 window.changePass=async function(){
-  const p1=document.getElementById('set-pass').value,p2=document.getElementById('set-pass2').value;
+  const p1=document.getElementById('set-pass').value, p2=document.getElementById('set-pass2').value;
+  const currentPass=document.getElementById('set-current-pass')?.value;
   if(p1!==p2){Utils.toast('كلمتا المرور غير متطابقتين','error');return}
   if(p1.length<6){Utils.toast('6 أحرف على الأقل','error');return}
-  try{await updatePassword(auth.currentUser,p1);Utils.toast('تم التغيير ✅','success')}
-  catch{Utils.toast('أعد تسجيل الدخول أولاً ثم حاول مجدداً','error')}
+  if(!currentPass){Utils.toast('أدخل كلمة المرور الحالية','error');return}
+  try{
+    // Re-authenticate first
+    const {EmailAuthProvider,reauthenticateWithCredential}=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js");
+    const credential=EmailAuthProvider.credential(auth.currentUser.email, currentPass);
+    await reauthenticateWithCredential(auth.currentUser, credential);
+    await updatePassword(auth.currentUser, p1);
+    document.getElementById('set-pass').value='';
+    document.getElementById('set-pass2').value='';
+    document.getElementById('set-current-pass').value='';
+    Utils.toast('تم تغيير كلمة المرور ✅','success');
+  } catch(e){
+    const msgs={'auth/wrong-password':'كلمة المرور الحالية غير صحيحة','auth/too-many-requests':'حاول بعد قليل'};
+    Utils.toast(msgs[e.code]||'خطأ — حاول مرة أخرى','error');
+  }
 };
 
 window.addEventListener('online',()=>Utils.toast('عاد الاتصال ✅','success'));
