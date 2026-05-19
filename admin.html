@@ -417,6 +417,7 @@ select.form-input{cursor:pointer}
     <a class="nav-item" data-page="assignments" onclick="showPage('assignments',this)"><span class="nav-icon">📚</span>الواجبات<span class="nav-badge red" id="nb-assign"></span></a>
     <a class="nav-item" data-page="exams"       onclick="showPage('exams',this)"><span class="nav-icon">🧪</span>الامتحانات</a>
     <a class="nav-item" data-page="lessons"     onclick="showPage('lessons',this)"><span class="nav-icon">🎬</span>الحصص</a>
+    <a class="nav-item" data-page="codes"       onclick="showPage('codes',this)"><span class="nav-icon">🔑</span>الأكواد<span class="nav-badge" id="nb-codes">0</span></a>
     <div class="nav-section">تحليل وتواصل</div>
     <a class="nav-item" data-page="analytics"     onclick="showPage('analytics',this)"><span class="nav-icon">📈</span>الأداء</a>
     <a class="nav-item" data-page="notifications" onclick="showPage('notifications',this)"><span class="nav-icon">🔔</span>الإشعارات<span class="nav-badge red" id="nb-notif"></span></a>
@@ -570,6 +571,57 @@ select.form-input{cursor:pointer}
       <div id="lessons-list"><div class="empty-state"><div class="icon">🎬</div><div class="msg">لا توجد حصص بعد</div></div></div>
     </div>
 
+    <!-- CODES PAGE -->
+    <div id="page-codes" class="hidden">
+      <div class="section-header">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <select class="form-input" id="codes-stage-filter" style="width:160px" onchange="loadCodes()">
+            <option value="">كل المراحل</option>
+          </select>
+          <select class="form-input" id="codes-status-filter" style="width:130px" onchange="loadCodes()">
+            <option value="">كل الأكواد</option>
+            <option value="unused">غير مستخدمة</option>
+            <option value="used">مستخدمة</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost btn-sm" onclick="exportCodesCSV()">📥 تصدير للطباعة</button>
+          <button class="btn btn-ghost btn-sm" onclick="openModal('import-codes-modal')">📤 رفع Excel</button>
+          <button class="btn btn-primary" onclick="openModal('gen-codes-modal')">🔑 توليد أكواد</button>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px">
+        <div class="stat-card c-blue"><span class="stat-icon">🔑</span><div class="stat-num" id="cs-total">—</div><div class="stat-label">إجمالي الأكواد</div></div>
+        <div class="stat-card c-green"><span class="stat-icon">✅</span><div class="stat-num" id="cs-unused">—</div><div class="stat-label">غير مستخدمة</div></div>
+        <div class="stat-card c-red"><span class="stat-icon">🔒</span><div class="stat-num" id="cs-used">—</div><div class="stat-label">مستخدمة</div></div>
+        <div class="stat-card c-yellow"><span class="stat-icon">📚</span><div class="stat-num" id="cs-stages">—</div><div class="stat-label">المراحل</div></div>
+      </div>
+
+      <!-- Codes Table -->
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th style="width:36px"><input type="checkbox" class="row-check" id="select-all-codes" onchange="toggleSelectAllCodes(this)"></th>
+              <th>الكود</th><th>المرحلة</th><th>الحالة</th><th>استُخدم بواسطة</th><th>تاريخ الاستخدام</th><th>إجراءات</th>
+            </tr></thead>
+            <tbody id="codes-tbody">
+              <tr><td colspan="7"><div class="empty-state"><div class="icon">🔑</div><div class="msg">لا توجد أكواد</div></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <!-- Bulk actions for codes -->
+        <div class="bulk-bar" id="codes-bulk-bar" style="margin:10px">
+          <span class="bulk-count" id="codes-bulk-count">0 محدد</span>
+          <button class="btn btn-danger btn-sm" onclick="bulkDeleteCodes()">🗑 حذف المحددة</button>
+          <button class="btn btn-ghost btn-sm" onclick="clearCodesSelection()">✕ إلغاء</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ANALYTICS -->
     <!-- ANALYTICS -->
     <div id="page-analytics" class="hidden">
       <div class="section-header">
@@ -782,15 +834,37 @@ select.form-input{cursor:pointer}
           </div>
         </div>
       </div>
-      <!-- Require Code Toggle -->
-      <div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px">
-        <div>
-          <div style="font-size:13px;font-weight:600;color:var(--ink)">🔑 تفعيل بكود</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:2px">الطالب يحتاج كود للوصول للحصة</div>
+      <!-- Access Type -->
+      <div class="form-group">
+        <label class="form-label">نوع الوصول *</label>
+        <div style="display:flex;flex-direction:column;gap:8px" id="access-type-group">
+          <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--radius-sm);cursor:pointer" id="at-system-lbl">
+            <input type="radio" name="access-type" value="code_system" id="at-system" checked onchange="onAccessTypeChange()">
+            <div><div style="font-size:13px;font-weight:600;color:var(--ink)">🎫 نظام الأكواد العام</div><div style="font-size:11px;color:var(--muted)">الطالب يدخل بأي كود من نفس المرحلة</div></div>
+          </label>
+          <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--radius-sm);cursor:pointer" id="at-custom-lbl">
+            <input type="radio" name="access-type" value="custom_codes" id="at-custom" onchange="onAccessTypeChange()">
+            <div><div style="font-size:13px;font-weight:600;color:var(--ink)">🔑 أكواد خاصة بالحصة</div><div style="font-size:11px;color:var(--muted)">كود one-time مخصص لهذه الحصة فقط</div></div>
+          </label>
+          <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--radius-sm);cursor:pointer" id="at-free-lbl">
+            <input type="radio" name="access-type" value="free" id="at-free" onchange="onAccessTypeChange()">
+            <div><div style="font-size:13px;font-weight:600;color:var(--ink)">🔓 مجاني</div><div style="font-size:11px;color:var(--muted)">الطالب يشاهد بدون كود</div></div>
+          </label>
         </div>
-        <label class="toggle-switch"><input type="checkbox" id="nl-require-code"><span class="toggle-track"></span></label>
       </div>
-      <div id="nl-code-note" class="warn-note" style="margin-top:10px">🔑 سيتم توليد كود one-time تلقائياً عند الإنشاء</div>
+      <div id="nl-stage-row" class="form-group">
+        <label class="form-label">المرحلة الدراسية *</label>
+        <select id="nl-stage" class="form-input">
+          <option value="">اختر المرحلة</option>
+          <option value="first_prep">أول إعدادي</option>
+          <option value="second_prep">ثاني إعدادي</option>
+          <option value="third_prep">ثالث إعدادي</option>
+          <option value="first_sec">أول ثانوي</option>
+          <option value="second_sec">ثاني ثانوي</option>
+          <option value="third_sec">ثالث ثانوي</option>
+        </select>
+      </div>
+      <div id="nl-code-note" class="warn-note" style="margin-top:4px">🎫 الطالب يدخل بأي كود غير مستخدم من نفس المرحلة</div>
     </div>
     <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('add-lesson-modal')">إلغاء</button><button class="btn btn-primary" id="add-lesson-btn" onclick="addLesson()">🎬 إنشاء</button></div>
   </div>
@@ -805,6 +879,93 @@ select.form-input{cursor:pointer}
       <div class="form-group"><label class="form-label">الرسالة *</label><textarea id="sn-msg" class="form-input"></textarea></div>
     </div>
     <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('send-notif-modal')">إلغاء</button><button class="btn btn-primary" onclick="sendNotification()">إرسال</button></div>
+  </div>
+</div>
+
+<!-- Manage Lesson Codes Modal -->
+<div class="modal-overlay" id="manage-lesson-codes-modal">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header">
+      <span class="modal-title" id="mlc-title">🔑 أكواد الحصة</span>
+      <button class="modal-close" onclick="closeModal('manage-lesson-codes-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <!-- Stats -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">
+        <div class="stat-card c-blue" style="padding:12px"><div class="stat-num" style="font-size:20px" id="mlc-total">—</div><div class="stat-label">إجمالي</div></div>
+        <div class="stat-card c-green" style="padding:12px"><div class="stat-num" style="font-size:20px" id="mlc-unused">—</div><div class="stat-label">متاحة</div></div>
+        <div class="stat-card c-red" style="padding:12px"><div class="stat-num" style="font-size:20px" id="mlc-used">—</div><div class="stat-label">مستخدمة</div></div>
+      </div>
+      <!-- Generate -->
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <input type="number" id="mlc-count" class="form-input" value="10" min="1" max="200" style="width:100px" placeholder="العدد">
+        <button class="btn btn-primary" onclick="generateLessonCodes()">🔑 توليد أكواد</button>
+        <button class="btn btn-ghost btn-sm" onclick="exportLessonCodesCSV()">📥 تصدير</button>
+      </div>
+      <!-- Codes list -->
+      <div style="max-height:300px;overflow-y:auto">
+        <table style="width:100%;border-collapse:collapse">
+          <thead><tr><th style="text-align:right;padding:8px;font-size:11px;color:var(--muted);border-bottom:1px solid var(--border)">الكود</th><th style="text-align:right;padding:8px;font-size:11px;color:var(--muted);border-bottom:1px solid var(--border)">الحالة</th><th style="text-align:right;padding:8px;font-size:11px;color:var(--muted);border-bottom:1px solid var(--border)">استُخدم بواسطة</th></tr></thead>
+          <tbody id="mlc-codes-list"><tr><td colspan="3" class="text-center text-muted" style="padding:16px">جار التحميل...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Generate Codes Modal -->
+<div class="modal-overlay" id="gen-codes-modal">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">🔑 توليد أكواد جديدة</span><button class="modal-close" onclick="closeModal('gen-codes-modal')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">المرحلة الدراسية *</label>
+        <select id="gc-stage" class="form-input">
+          <option value="">اختر المرحلة</option>
+          <option value="first_prep">أول إعدادي</option>
+          <option value="second_prep">ثاني إعدادي</option>
+          <option value="third_prep">ثالث إعدادي</option>
+          <option value="first_sec">أول ثانوي</option>
+          <option value="second_sec">ثاني ثانوي</option>
+          <option value="third_sec">ثالث ثانوي</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">عدد الأكواد *</label>
+        <input type="number" id="gc-count" class="form-input" value="10" min="1" max="500" placeholder="مثال: 50">
+      </div>
+      <div class="info-note">💡 سيتم توليد أكواد فريدة مضمونة عدم التكرار — 8 أحرف (كبير + صغير + أرقام)</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('gen-codes-modal')">إلغاء</button>
+      <button class="btn btn-primary" id="gen-codes-btn" onclick="generateCodes()">🔑 توليد</button>
+    </div>
+  </div>
+</div>
+
+<!-- Import Codes Modal -->
+<div class="modal-overlay" id="import-codes-modal">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">📤 رفع أكواد من Excel</span><button class="modal-close" onclick="closeModal('import-codes-modal')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">المرحلة الدراسية *</label>
+        <select id="ic-stage" class="form-input">
+          <option value="">اختر المرحلة</option>
+          <option value="first_prep">أول إعدادي</option>
+          <option value="second_prep">ثاني إعدادي</option>
+          <option value="third_prep">ثالث إعدادي</option>
+          <option value="first_sec">أول ثانوي</option>
+          <option value="second_sec">ثاني ثانوي</option>
+          <option value="third_sec">ثالث ثانوي</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">ملف Excel / CSV *</label>
+        <input type="file" id="ic-file" class="form-input" accept=".csv,.xlsx,.xls">
+      </div>
+      <div class="warn-note">⚠️ الملف لازم يحتوي على عمود باسم <strong>Code</strong> — الأكواد الموجودة بالفعل هتتجاهل</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('import-codes-modal')">إلغاء</button>
+      <button class="btn btn-primary" id="import-codes-btn" onclick="importCodesFromFile()">📤 رفع</button>
+    </div>
   </div>
 </div>
 
@@ -1113,6 +1274,7 @@ onAuthStateChanged(auth, async user => {
   });
   // Start auto logout timer
   window._startAutoLogout?.();
+  populateStageFilters();
   // Listen for permission requests (owner only)
   if (currentUser.role === 'owner') listenPermRequests();
 });
@@ -1431,15 +1593,58 @@ window.deleteAssign=async function(id){if(!confirm('حذف الواجب؟'))retu
 // LESSONS
 window.loadLessons=async function(){
   const groupId=document.getElementById('lesson-group-filter')?.value; const lessons=await LessonService.getLessons(groupId||null);
-  document.getElementById('lessons-list').innerHTML=lessons.map(l=>{const g=allGroups.find(x=>x.id===l.groupId); const accessed=(l.accessList||[]).length;
-    return`<div class="lesson-card"><div class="lesson-top"><div><div class="lesson-title">🎬 ${l.title}</div><div class="lesson-meta"><span>🏫 ${g?.name||'—'}</span>${l.date?`<span>📅 ${l.date}</span>`:''}<span>👁 ${accessed} طالب وصل</span></div>${l.description?`<div style="font-size:12px;color:var(--text2);margin-top:5px">${l.description}</div>`:''}</div><div style="display:flex;gap:5px;flex-shrink:0"><a href="${l.videoUrl}" target="_blank" class="btn btn-ghost btn-sm">▶️ الفيديو</a><button class="btn btn-ghost btn-sm" onclick="openLessonAtt('${l.id}','${l.title}')">📋 تحضير</button><button class="btn btn-danger btn-sm" onclick="deleteLesson('${l.id}')">🗑</button></div></div><div class="lesson-code-box"><div><div style="font-size:10px;color:var(--muted);margin-bottom:3px;letter-spacing:.05em;text-transform:uppercase">كود الدخول (one-time)</div><div class="lesson-code ${l.codeUsed?'used':''}">${l.code||'—'}</div></div><div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end"><span class="badge ${l.codeUsed?'badge-muted':'badge-green'}">${l.codeUsed?'🔒 استُخدم':'🟢 متاح'}</span><button class="btn btn-ghost btn-sm" onclick="regenCode('${l.id}')">🔄 كود جديد</button></div></div></div>`;
+  document.getElementById('lessons-list').innerHTML=lessons.map(l=>{
+    const g=allGroups.find(x=>x.id===l.groupId); const accessed=(l.accessList||[]).length;
+    const aType = l.accessType || (l.code ? 'custom_codes' : 'free');
+    const accessBadge = aType==='free'
+      ? '<span class="badge badge-green">🔓 مجاني</span>'
+      : aType==='code_system'
+      ? `<span class="badge badge-blue">🎫 ${STAGE_LABELS[l.stage]||l.stage||'مرحلة'}</span>`
+      : `<span class="badge badge-yellow">🔑 كود خاص</span>`;
+
+    const codeBox = aType==='custom_codes' ? `
+      <div class="lesson-code-box">
+        <div>
+          <div style="font-size:10px;color:var(--muted);margin-bottom:3px;text-transform:uppercase">كود الدخول (خاص)</div>
+          <div class="lesson-code ${l.codeUsed?'used':''}">${l.code||'—'}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end">
+          <span class="badge ${l.codeUsed?'badge-muted':'badge-green'}">${l.codeUsed?'🔒 استُخدم':'🟢 متاح'}</span>
+          <button class="btn btn-ghost btn-sm" onclick="manageLessonCodes('${l.id}','${l.title}')">🔑 إدارة الأكواد</button>
+        </div>
+      </div>` : aType==='code_system' ? `
+      <div class="lesson-code-box">
+        <div style="font-size:12px;color:var(--text2)">🎫 يفتح بأكواد مرحلة <strong>${STAGE_LABELS[l.stage]||l.stage}</strong></div>
+        <span class="badge badge-blue">نظام الأكواد</span>
+      </div>` : '';
+
+    return`<div class="lesson-card">
+      <div class="lesson-top">
+        <div>
+          <div class="lesson-title">🎬 ${l.title}</div>
+          <div class="lesson-meta">
+            <span>🏫 ${g?.name||'—'}</span>
+            ${l.date?`<span>📅 ${l.date}</span>`:''}
+            <span>👁 ${accessed} طالب</span>
+            ${accessBadge}
+          </div>
+          ${l.description?`<div style="font-size:12px;color:var(--text2);margin-top:5px">${l.description}</div>`:''}
+        </div>
+        <div style="display:flex;gap:5px;flex-shrink:0">
+          <a href="${l.videoUrl}" target="_blank" class="btn btn-ghost btn-sm">▶️ الفيديو</a>
+          <button class="btn btn-ghost btn-sm" onclick="openLessonAtt('${l.id}','${l.title}')">📋 تحضير</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteLesson('${l.id}')">🗑</button>
+        </div>
+      </div>
+      ${codeBox}
+    </div>`;
   }).join('')||'<div class="empty-state"><div class="icon">🎬</div><div class="msg">لا توجد حصص بعد</div></div>';
 };
 window.addLesson=async function(){
   const title=document.getElementById('nl-title').value.trim(),desc=document.getElementById('nl-desc').value.trim(),groupId=document.getElementById('nl-group').value,url=document.getElementById('nl-url').value.trim(),date=document.getElementById('nl-date').value;
   if(!title||!groupId||!url){Utils.toast('العنوان والمجموعة والرابط مطلوبة','error');return}
   const btn=document.getElementById('add-lesson-btn');btn.disabled=true;btn.textContent='جار الإنشاء...';
-  try{const{id,code}=await LessonService.createLesson({title,description:desc,groupId,videoUrl:url,date:date||null,teacherId:currentUser.uid});const students=await UserService.getStudents(groupId);await NotifService.sendToGroup(students.map(s=>s.uid),'info',`حصة جديدة: ${title} — الكود: ${code}`,id);Utils.toast(`تم إنشاء الحصة ✅  الكود: ${code}`,'success',7000);closeModal('add-lesson-modal');['nl-title','nl-desc','nl-url','nl-date'].forEach(i=>document.getElementById(i).value='');document.getElementById('nl-group').value='';loadLessons()}
+  try{const{id,code}=await LessonService.createLesson({title,description:desc,groupId,videoUrl:url,date:date||null,teacherId:currentUser.uid});// No notification to students — codes are privateUtils.toast(`تم إنشاء الحصة ✅  الكود: ${code}`,'success',7000);closeModal('add-lesson-modal');['nl-title','nl-desc','nl-url','nl-date'].forEach(i=>document.getElementById(i).value='');document.getElementById('nl-group').value='';loadLessons()}
   catch(e){Utils.toast(e.message,'error')}
   finally{btn.disabled=false;btn.textContent='🎬 إنشاء'}
 };
@@ -1802,14 +2007,16 @@ window.previewFile = function(input) {
 // ══════════════════════════════════════
 window.addLesson = async function() {
   if (!requirePerm('lessons','إضافة الحصص')) return;
-  const title       = document.getElementById('nl-title').value.trim();
-  const desc        = document.getElementById('nl-desc').value.trim();
-  const groupId     = document.getElementById('nl-group').value;
-  const date        = document.getElementById('nl-date').value;
-  const requireCode = document.getElementById('nl-require-code').checked;
-  const isUpload    = !document.getElementById('src-youtube').classList.contains('hidden') === false;
-  // Determine video source
-  const isYoutube   = !document.getElementById('src-youtube').classList.contains('hidden');
+  const title      = document.getElementById('nl-title').value.trim();
+  const desc       = document.getElementById('nl-desc').value.trim();
+  const groupId    = document.getElementById('nl-group').value;
+  const date       = document.getElementById('nl-date').value;
+  const accessType = document.querySelector('input[name="access-type"]:checked')?.value || 'code_system';
+  const stage      = document.getElementById('nl-stage')?.value || null;
+  const isYoutube  = !document.getElementById('src-youtube').classList.contains('hidden');
+
+  if (!title || !groupId) { Utils.toast('العنوان والمجموعة مطلوبة','error'); return; }
+  if (accessType === 'code_system' && !stage) { Utils.toast('اختر المرحلة الدراسية','error'); return; }
 
   if (!title||!groupId) { Utils.toast('العنوان والمجموعة مطلوبة','error'); return; }
 
@@ -1848,33 +2055,51 @@ window.addLesson = async function() {
 
     const lessonData = {
       title, description:desc, groupId, videoUrl, videoType,
-      date:date||null, teacherId:currentUser.uid, requireCode
+      date:date||null, teacherId:currentUser.uid,
+      accessType,  // 'code_system' | 'custom_codes' | 'free'
+      stage: accessType === 'code_system' ? stage : null,
     };
 
-    // Generate code only if required
-    const code = requireCode ? await LessonService.generateUniqueCode() : null;
-    const ref2 = await addDoc(collection(db,'lessons'), {
-      ...lessonData, code, codeUsed:false, accessList:[], createdAt:serverTimestamp()
-    });
-    // Save code record if requireCode
-    if (requireCode && code) {
+    // Handle different access types
+    let code = null;
+    if (accessType === 'custom_codes') {
+      code = await LessonService.generateUniqueCode();
       await addDoc(collection(db,'lesson_codes'), {
-        code, lessonId:ref2.id, groupId:lessonData.groupId,
-        isUsed:false, usedBy:null, createdAt:serverTimestamp()
+        code, lessonId:'TBD', groupId, isUsed:false, usedBy:null, createdAt:serverTimestamp()
       });
     }
 
-    const students = await UserService.getStudents(groupId);
-    const msg = requireCode
-      ? `حصة جديدة: ${title} — الكود: ${code}`
-      : `حصة جديدة متاحة: ${title}`;
-    await NotifService.sendToGroup(students.map(s=>s.uid), 'info', msg, ref2.id);
+    const ref2 = await addDoc(collection(db,'lessons'), {
+      ...lessonData, code, codeUsed:false, accessList:[], createdAt:serverTimestamp()
+    });
 
-    Utils.toast(requireCode ? `تم إنشاء الحصة ✅  الكود: ${code}` : 'تم إنشاء الحصة ✅ (بدون كود)', 'success', 7000);
+    // Update lesson_codes with real lessonId for custom_codes
+    if (accessType === 'custom_codes' && code) {
+      const cq = query(collection(db,'lesson_codes'), where('code','==',code));
+      const cs = await getDocs(cq);
+      if (!cs.empty) await updateDoc(cs.docs[0].ref, {lessonId:ref2.id});
+    }
+
+    const students = await UserService.getStudents(groupId);
+    // Notify students only that a new lesson is available (NO code in message)
+    if (accessType === 'free') {
+      const students2 = await UserService.getStudents(groupId);
+      await NotifService.sendToGroup(students2.map(s=>s.uid), 'info', `حصة جديدة متاحة: ${title}`, ref2.id);
+    }
+    // For paid lessons — no notification, students discover via lessons page
+
+    const toastMsg = accessType==='custom_codes'
+      ? `تم إنشاء الحصة ✅ — الكود: ${code}`
+      : accessType==='code_system'
+      ? `تم إنشاء الحصة ✅ — يفتح بأكواد مرحلة: ${STAGE_LABELS[stage]||stage}`
+      : 'تم إنشاء الحصة ✅ (مجانية)';
+    Utils.toast(toastMsg, 'success', 7000);
     closeModal('add-lesson-modal');
     ['nl-title','nl-desc','nl-url','nl-date'].forEach(i=>{ const el=document.getElementById(i); if(el) el.value=''; });
     document.getElementById('nl-group').value='';
-    document.getElementById('nl-require-code').checked = true;
+    document.getElementById('nl-stage').value='';
+    const atSystem = document.getElementById('at-system');
+    if (atSystem) { atSystem.checked=true; onAccessTypeChange(); }
     switchVideoSrc('youtube');
     loadLessons();
   } catch(e) {
@@ -2052,6 +2277,383 @@ window.deleteStudentPermanent = async function(uid, name) {
     await loadGroups();
     loadStudents();
   } catch(e) { Utils.toast('خطأ في الحذف: ' + e.message, 'error'); }
+};
+
+
+// ══════════════════════════════════════
+//  STAGE LABELS
+// ══════════════════════════════════════
+const STAGE_LABELS = {
+  first_prep:  'أول إعدادي',
+  second_prep: 'ثاني إعدادي',
+  third_prep:  'ثالث إعدادي',
+  first_sec:   'أول ثانوي',
+  second_sec:  'ثاني ثانوي',
+  third_sec:   'ثالث ثانوي',
+};
+
+// ══════════════════════════════════════
+//  CODE SERVICE (Global codes system)
+// ══════════════════════════════════════
+const CodeService = {
+  // Generate strong 8-char code
+  generateCode() {
+    const upper  = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+    const lower  = 'abcdefghjkmnpqrstuvwxyz';
+    const digits = '23456789';
+    const all    = upper + lower + digits;
+    let code = '';
+    code += upper [Math.floor(Math.random()*upper.length)];
+    code += lower [Math.floor(Math.random()*lower.length)];
+    code += digits[Math.floor(Math.random()*digits.length)];
+    for (let i=0;i<5;i++) code += all[Math.floor(Math.random()*all.length)];
+    return code.split('').sort(()=>Math.random()-.5).join('');
+  },
+
+  async isCodeUnique(code) {
+    // Check in both codes and lesson_codes collections
+    const [c1, c2] = await Promise.all([
+      getDocs(query(collection(db,'codes'),        where('code','==',code))),
+      getDocs(query(collection(db,'lesson_codes'), where('code','==',code))),
+    ]);
+    return c1.empty && c2.empty;
+  },
+
+  async generateUniqueCode() {
+    let code, attempts = 0;
+    do { code = this.generateCode(); attempts++; if(attempts>30) break; }
+    while (!(await this.isCodeUnique(code)));
+    return code;
+  },
+
+  async generateBatch(stage, count) {
+    const codes = [];
+    const batch = writeBatch(db);
+    for (let i=0; i<count; i++) {
+      const code = await this.generateUniqueCode();
+      const ref  = doc(collection(db,'codes'));
+      batch.set(ref, {
+        code, stage, isUsed:false,
+        usedBy:null, usedAt:null,
+        teacherId: currentUser.uid,
+        createdAt: serverTimestamp()
+      });
+      codes.push({id:ref.id, code, stage});
+    }
+    await batch.commit();
+    return codes;
+  },
+
+  async getCodes(stage=null, statusFilter=null) {
+    let q = collection(db,'codes');
+    const constraints = [where('teacherId','==',currentUser.uid)];
+    if (stage)  constraints.push(where('stage','==',stage));
+    if (statusFilter === 'used')   constraints.push(where('isUsed','==',true));
+    if (statusFilter === 'unused') constraints.push(where('isUsed','==',false));
+    constraints.push(orderBy('createdAt','desc'));
+    q = query(q, ...constraints);
+    const s = await getDocs(q);
+    return s.docs.map(d=>({id:d.id,...d.data()}));
+  },
+
+  async deleteCode(id) { await deleteDoc(doc(db,'codes',id)); },
+
+  async importCodes(stage, codesArray) {
+    // Filter duplicates
+    const existing = new Set();
+    const allSnap  = await getDocs(query(collection(db,'codes'), where('teacherId','==',currentUser.uid)));
+    allSnap.docs.forEach(d => existing.add(d.data().code));
+    const toImport = codesArray.filter(c => c && c.length >= 6 && !existing.has(c));
+    if (!toImport.length) return 0;
+    const batch = writeBatch(db);
+    for (const code of toImport) {
+      batch.set(doc(collection(db,'codes')), {
+        code, stage, isUsed:false, usedBy:null, usedAt:null,
+        teacherId:currentUser.uid, createdAt:serverTimestamp()
+      });
+    }
+    await batch.commit();
+    return toImport.length;
+  },
+};
+
+// ══════════════════════════════════════
+//  CODES PAGE
+// ══════════════════════════════════════
+let allCodes = [];
+let selectedCodes = new Set();
+
+// Populate stage filters
+function populateStageFilters() {
+  const filterEl = document.getElementById('codes-stage-filter');
+  const gcEl     = document.getElementById('gc-stage');
+  const icEl     = document.getElementById('ic-stage');
+  const nlEl     = document.getElementById('nl-stage');
+  [filterEl, gcEl, icEl, nlEl].forEach(el => {
+    if (!el) return;
+    const cur = el.value;
+    const first = el.options[0];
+    el.innerHTML = '';
+    if (first) el.appendChild(first);
+    Object.entries(STAGE_LABELS).forEach(([val, label]) => {
+      const o = document.createElement('option');
+      o.value = val; o.textContent = label;
+      el.appendChild(o);
+    });
+    if (cur) el.value = cur;
+  });
+}
+
+window.loadCodes = async function() {
+  const stage  = document.getElementById('codes-stage-filter')?.value  || null;
+  const status = document.getElementById('codes-status-filter')?.value || null;
+  const tbody  = document.getElementById('codes-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="7" class="text-center" style="padding:22px"><div class="spinner" style="margin:0 auto"></div></td></tr>';
+  allCodes = await CodeService.getCodes(stage, status);
+
+  // Stats
+  const all    = await CodeService.getCodes(null, null);
+  const used   = all.filter(c=>c.isUsed).length;
+  const unused = all.filter(c=>!c.isUsed).length;
+  const stages = new Set(all.map(c=>c.stage)).size;
+  document.getElementById('cs-total').textContent  = all.length;
+  document.getElementById('cs-used').textContent   = used;
+  document.getElementById('cs-unused').textContent = unused;
+  document.getElementById('cs-stages').textContent = stages;
+  document.getElementById('nb-codes').textContent  = unused || '';
+
+  // Populate stage filter with existing stages
+  populateStageFilters();
+
+  tbody.innerHTML = allCodes.map(code => `<tr>
+    <td onclick="event.stopPropagation()"><input type="checkbox" class="row-check code-row-check" data-id="${code.id}" onchange="toggleCodeSelect(this)"></td>
+    <td><span style="font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:.08em;color:var(--accent)">${code.code}</span></td>
+    <td><span class="badge badge-blue">${STAGE_LABELS[code.stage]||code.stage}</span></td>
+    <td><span class="badge ${code.isUsed?'badge-muted':'badge-green'}">${code.isUsed?'🔒 مستخدم':'✅ متاح'}</span></td>
+    <td style="font-size:12px;color:var(--text2)">${code.usedBy||'—'}</td>
+    <td style="font-size:11px;color:var(--muted)">${code.usedAt?Utils.formatDate(code.usedAt,true):'—'}</td>
+    <td><button class="btn btn-danger btn-sm" onclick="CodeService.deleteCode('${code.id}').then(()=>{Utils.toast('تم الحذف','success');loadCodes()})">🗑</button></td>
+  </tr>`).join('') || '<tr><td colspan="7"><div class="empty-state"><div class="icon">🔑</div><div class="msg">لا توجد أكواد</div></div></td></tr>';
+};
+
+window.toggleSelectAllCodes = function(cb) {
+  document.querySelectorAll('.code-row-check').forEach(c => {
+    c.checked = cb.checked;
+    if (cb.checked) selectedCodes.add(c.dataset.id);
+    else selectedCodes.delete(c.dataset.id);
+  });
+  updateCodesBulkBar();
+};
+window.toggleCodeSelect = function(cb) {
+  if (cb.checked) selectedCodes.add(cb.dataset.id);
+  else selectedCodes.delete(cb.dataset.id);
+  updateCodesBulkBar();
+};
+function updateCodesBulkBar() {
+  const bar = document.getElementById('codes-bulk-bar');
+  if (!bar) return;
+  bar.classList.toggle('show', selectedCodes.size > 0);
+  document.getElementById('codes-bulk-count').textContent = selectedCodes.size + ' محدد';
+}
+window.clearCodesSelection = function() {
+  selectedCodes.clear();
+  document.querySelectorAll('.code-row-check').forEach(c=>c.checked=false);
+  document.getElementById('select-all-codes').checked = false;
+  updateCodesBulkBar();
+};
+window.bulkDeleteCodes = async function() {
+  if (!selectedCodes.size) return;
+  if (!confirm(`حذف ${selectedCodes.size} كود؟`)) return;
+  const batch = writeBatch(db);
+  selectedCodes.forEach(id => batch.delete(doc(db,'codes',id)));
+  await batch.commit();
+  Utils.toast('تم الحذف ✅','success');
+  clearCodesSelection();
+  loadCodes();
+};
+
+// ── Generate codes ──
+window.generateCodes = async function() {
+  const stage = document.getElementById('gc-stage').value;
+  const count = parseInt(document.getElementById('gc-count').value)||0;
+  if (!stage) { Utils.toast('اختر المرحلة','error'); return; }
+  if (count < 1 || count > 500) { Utils.toast('العدد بين 1 و 500','error'); return; }
+  const btn = document.getElementById('gen-codes-btn');
+  btn.disabled = true; btn.textContent = `جار توليد ${count} كود...`;
+  try {
+    await CodeService.generateBatch(stage, count);
+    Utils.toast(`تم توليد ${count} كود ✅`,'success');
+    closeModal('gen-codes-modal');
+    loadCodes();
+  } catch(e) { Utils.toast(e.message,'error'); }
+  finally { btn.disabled=false; btn.textContent='🔑 توليد'; }
+};
+
+// ── Import from Excel/CSV ──
+window.importCodesFromFile = async function() {
+  const stage   = document.getElementById('ic-stage').value;
+  const fileEl  = document.getElementById('ic-file');
+  if (!stage)            { Utils.toast('اختر المرحلة','error'); return; }
+  if (!fileEl.files[0])  { Utils.toast('اختر ملف','error'); return; }
+  const btn = document.getElementById('import-codes-btn');
+  btn.disabled=true; btn.textContent='جار الرفع...';
+  try {
+    const text   = await fileEl.files[0].text();
+    const lines  = text.split('\n').map(l=>l.trim()).filter(Boolean);
+    // Find Code column
+    const headers = lines[0].split(',').map(h=>h.replace(/"/g,'').trim().toLowerCase());
+    const codeIdx = headers.indexOf('code');
+    let codes;
+    if (codeIdx >= 0) {
+      codes = lines.slice(1).map(l => {
+        const parts = l.split(',');
+        return parts[codeIdx]?.replace(/"/g,'').trim();
+      }).filter(Boolean);
+    } else {
+      // Single column — each line is a code
+      codes = lines.map(l=>l.replace(/"/g,'').trim()).filter(Boolean);
+    }
+    const imported = await CodeService.importCodes(stage, codes);
+    Utils.toast(`تم استيراد ${imported} كود جديد ✅`,'success');
+    closeModal('import-codes-modal');
+    fileEl.value='';
+    loadCodes();
+  } catch(e) { Utils.toast('خطأ في قراءة الملف: '+e.message,'error'); }
+  finally { btn.disabled=false; btn.textContent='📤 رفع'; }
+};
+
+// ── Export codes to CSV for printing ──
+window.exportCodesCSV = async function() {
+  const stage  = document.getElementById('codes-stage-filter')?.value || null;
+  const status = document.getElementById('codes-status-filter')?.value || null;
+  const codes  = await CodeService.getCodes(stage, status||'unused');
+  if (!codes.length) { Utils.toast('لا توجد أكواد للتصدير','warning'); return; }
+  const rows = [['Code','Stage','Status','Used By','Date']];
+  codes.forEach(c => rows.push([c.code, STAGE_LABELS[c.stage]||c.stage, c.isUsed?'Used':'Available', c.usedBy||'', c.usedAt?Utils.formatDate(c.usedAt,true):'']));
+  const csv  = rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
+  const a    = Object.assign(document.createElement('a'),{href:URL.createObjectURL(blob),download:`codes_${new Date().toISOString().slice(0,10).replace(/-/g,'')}_${Date.now()%100000}.csv`});
+  a.click();
+  Utils.toast('تم تصدير الأكواد ✅','success');
+};
+
+// ══════════════════════════════════════
+//  ACCESS TYPE TOGGLE (lesson modal)
+// ══════════════════════════════════════
+window.onAccessTypeChange = function() {
+  const val    = document.querySelector('input[name="access-type"]:checked')?.value || 'code_system';
+  const note   = document.getElementById('nl-code-note');
+  const stageRow = document.getElementById('nl-stage-row');
+  const msgs = {
+    code_system:  '🎫 الطالب يدخل بأي كود غير مستخدم من نفس المرحلة',
+    custom_codes: '🔑 سيتم توليد كود one-time مخصص لهذه الحصة',
+    free:         '🔓 الحصة مجانية — بدون كود',
+  };
+  if (note) note.textContent = msgs[val] || '';
+  if (stageRow) stageRow.style.display = val === 'code_system' ? '' : 'none';
+
+  // Highlight selected
+  document.querySelectorAll('#access-type-group label').forEach(l => {
+    l.style.borderColor = 'var(--border)';
+    l.style.background  = 'var(--surface2)';
+  });
+  const selected = document.querySelector(`input[name="access-type"][value="${val}"]`)?.closest('label');
+  if (selected) {
+    selected.style.borderColor = 'var(--accent)';
+    selected.style.background  = 'var(--accent-bg)';
+  }
+};
+
+// ══════════════════════════════════════
+//  VIDEO PROTECTION
+// ══════════════════════════════════════
+(function initVideoProtection() {
+  // Disable right-click
+  document.addEventListener('contextmenu', e => {
+    if (e.target.tagName === 'VIDEO' || e.target.closest('.video-protect')) {
+      e.preventDefault();
+    }
+  });
+  // Disable DevTools shortcuts
+  document.addEventListener('keydown', e => {
+    if (
+      e.key === 'F12' ||
+      (e.ctrlKey && e.shiftKey && ['I','J','C'].includes(e.key)) ||
+      (e.ctrlKey && e.key === 'U')
+    ) {
+      e.preventDefault();
+      return false;
+    }
+  });
+})();
+
+
+// ══════════════════════════════════════
+//  MANAGE LESSON CODES (custom_codes)
+// ══════════════════════════════════════
+let currentLessonCodesId = null;
+
+window.manageLessonCodes = async function(lessonId, title) {
+  currentLessonCodesId = lessonId;
+  document.getElementById('mlc-title').textContent = `🔑 أكواد: ${title}`;
+  openModal('manage-lesson-codes-modal');
+  await loadLessonCodesForModal(lessonId);
+};
+
+async function loadLessonCodesForModal(lessonId) {
+  const q    = query(collection(db,'lesson_codes'), where('lessonId','==',lessonId), orderBy('createdAt','desc'));
+  const snap = await getDocs(q);
+  const codes = snap.docs.map(d=>({id:d.id,...d.data()}));
+  const used   = codes.filter(c=>c.isUsed).length;
+  const unused = codes.filter(c=>!c.isUsed).length;
+  document.getElementById('mlc-total').textContent  = codes.length;
+  document.getElementById('mlc-used').textContent   = used;
+  document.getElementById('mlc-unused').textContent = unused;
+
+  document.getElementById('mlc-codes-list').innerHTML = codes.map(code => `
+    <tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:8px;font-family:var(--mono);font-size:12px;font-weight:700;color:var(--accent)">${code.code}</td>
+      <td style="padding:8px"><span class="badge ${code.isUsed?'badge-muted':'badge-green'}">${code.isUsed?'🔒 مستخدم':'✅ متاح'}</span></td>
+      <td style="padding:8px;font-size:11px;color:var(--text2)">${code.usedBy||'—'}</td>
+    </tr>`).join('') || '<tr><td colspan="3" class="text-center text-muted" style="padding:16px">لا توجد أكواد</td></tr>';
+}
+
+window.generateLessonCodes = async function() {
+  if (!currentLessonCodesId) return;
+  const count = parseInt(document.getElementById('mlc-count').value)||0;
+  if (count < 1 || count > 200) { Utils.toast('العدد بين 1 و 200','error'); return; }
+  try {
+    const batch = writeBatch(db);
+    for (let i=0; i<count; i++) {
+      const code = await LessonService.generateUniqueCode();
+      batch.set(doc(collection(db,'lesson_codes')), {
+        code, lessonId:currentLessonCodesId,
+        isUsed:false, usedBy:null, usedAt:null,
+        teacherId:currentUser.uid, createdAt:serverTimestamp()
+      });
+    }
+    await batch.commit();
+    Utils.toast(`تم توليد ${count} كود ✅`,'success');
+    await loadLessonCodesForModal(currentLessonCodesId);
+  } catch(e) { Utils.toast(e.message,'error'); }
+};
+
+window.exportLessonCodesCSV = async function() {
+  if (!currentLessonCodesId) return;
+  const q    = query(collection(db,'lesson_codes'), where('lessonId','==',currentLessonCodesId), where('isUsed','==',false));
+  const snap = await getDocs(q);
+  const codes = snap.docs.map(d=>d.data());
+  if (!codes.length) { Utils.toast('لا توجد أكواد متاحة','warning'); return; }
+  const rows = [['Code','Status','Lesson']];
+  codes.forEach(c => rows.push([c.code,'Available',currentLessonCodesId]));
+  const csv  = rows.map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');
+  const a    = Object.assign(document.createElement('a'),{
+    href:URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'})),
+    download:`lesson_codes_${Date.now()}.csv`
+  });
+  a.click();
+  Utils.toast('تم التصدير ✅','success');
 };
 
 window.addEventListener('online',()=>Utils.toast('عاد الاتصال ✅','success'));

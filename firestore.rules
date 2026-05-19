@@ -157,6 +157,20 @@ service cloud.firestore {
     }
 
 
+
+    // ═══════════════════════════════════════════
+    //  CODES COLLECTION (Global stage-based codes)
+    // ═══════════════════════════════════════════
+    match /codes/{codeId} {
+      // Students can read to validate — admin writes
+      allow read:   if isAuth();
+      allow create: if isAdmin();
+      allow delete: if isAdmin();
+      // Student marks code as used
+      allow update: if isAdmin() ||
+        (isActiveStudent() && onlyUpdatingFields(['isUsed','usedBy','usedAt','lessonId']));
+    }
+
     // ═══════════════════════════════════════════
     //  LESSON CODES COLLECTION
     // ═══════════════════════════════════════════
@@ -166,7 +180,7 @@ service cloud.firestore {
       allow create: if isAdmin();
       // الطالب يقدر يعدل usedBy/isUsed/usedAt فقط
       allow update: if isAdmin() ||
-        (isActiveStudent() && onlyUpdatingFields(['isUsed','usedBy','usedAt']));
+        (isActiveStudent() && onlyUpdatingFields(['isUsed','usedBy','usedAt','lessonId']));
       allow delete: if isAdmin();
     }
 

@@ -722,42 +722,95 @@ const NotifService={
 const LessonService={
   async getLessonsForGroup(groupId){const q=query(collection(db,'lessons'),where('groupId','==',groupId),orderBy('createdAt','desc'));const s=await getDocs(q);return s.docs.map(d=>({id:d.id,...d.data()}))},
   hasAccess(lesson,uid){return(lesson.accessList||[]).includes(uid)},
-  async useCode(lessonId,studentId,code){
-    const codeInput = code.trim(); // keep original case for comparison
-    const snap=await getDoc(doc(db,'lessons',lessonId));
-    if(!snap.exists()) throw new Error('الحصة غير موجودة');
-    const lesson={id:snap.id,...snap.data()};
+  // ══════════════════════════════════════
+  // useCode — custom_codes (كود خاص بالحصة)
+  // كل كود يفتح هذه الحصة مرة واحدة لطالب واحد
+  // ══════════════════════════════════════
+  async useCode(lessonId, studentId, code) {
+    const codeInput = code.trim();
+    const snap = await getDoc(doc(db,'lessons',lessonId));
+    if (!snap.exists()) throw new Error('الحصة غير موجودة');
+    const lesson = {id:snap.id,...snap.data()};
 
-    // Compare code exactly (case-sensitive, 8-char mixed)
-    if(lesson.code !== codeInput) throw new Error('الكود غير صحيح ❌');
+    // Already has access → open directly
+    if (this.hasAccess(lesson, studentId)) return lesson;
 
-    // Already has access
-    if(this.hasAccess(lesson,studentId)) {
-      return lesson; // just open it
-    }
+    // Find this code in lesson_codes for this specific lesson
+    const cq = query(
+      collection(db,'lesson_codes'),
+      where('lessonId','==',lessonId),
+      where('code','==',codeInput)
+    );
+    const codeSnap = await getDocs(cq);
+    if (codeSnap.empty) throw new Error('الكود غير صحيح ❌');
+
+    const codeDoc  = codeSnap.docs[0];
+    const codeData = codeDoc.data();
 
     // Code already used by someone else
-    if(lesson.codeUsed) throw new Error('الكود استُخدم من قِبل شخص آخر 🔒');
+    if (codeData.isUsed) {
+      if (codeData.usedBy === studentId) return lesson; // same student
+      throw new Error('الكود استُخدم من قِبل شخص آخر 🔒');
+    }
 
-    // Grant access + mark code as used
-    const list=lesson.accessList||[];
-    await updateDoc(doc(db,'lessons',lessonId),{
-      codeUsed:true,
-      accessList:[...list,studentId]
+    // Mark code as used by this student
+    await updateDoc(codeDoc.ref, {
+      isUsed:true, usedBy:studentId, usedAt:serverTimestamp()
     });
 
-    // Update lesson_codes record
-    const codeQuery = query(collection(db,'lesson_codes'),
-      where('lessonId','==',lessonId),
-      where('code','==',codeInput));
-    const codeSnap = await getDocs(codeQuery);
-    if(!codeSnap.empty){
-      await updateDoc(codeSnap.docs[0].ref,{
-        isUsed:true,
-        usedBy:studentId,
-        usedAt:serverTimestamp()
-      });
+    // Grant access to this lesson
+    const list = lesson.accessList||[];
+    await updateDoc(doc(db,'lessons',lessonId), {
+      accessList:[...list,studentId]
+    });
+    return lesson;
+  },
+
+  // ══════════════════════════════════════
+  // useCodeSystem — code_system (كود مرحلة عام)
+  // الكود يفتح حصة واحدة فقط من المرحلة ثم يُقفل
+  // ══════════════════════════════════════
+  async useCodeSystem(lessonId, studentId, code) {
+    const codeInput = code.trim();
+    const snap = await getDoc(doc(db,'lessons',lessonId));
+    if (!snap.exists()) throw new Error('الحصة غير موجودة');
+    const lesson = {id:snap.id,...snap.data()};
+
+    // Already has access → open directly (no new code needed)
+    if (this.hasAccess(lesson, studentId)) return lesson;
+
+    // Find code in global codes collection
+    const cq = query(
+      collection(db,'codes'),
+      where('code','==',codeInput)
+    );
+    const codeSnap = await getDocs(cq);
+    if (codeSnap.empty) throw new Error('الكود غير صحيح ❌');
+
+    const codeDoc  = codeSnap.docs[0];
+    const codeData = codeDoc.data();
+
+    // Validate stage matches lesson
+    if (codeData.stage !== lesson.stage) {
+      throw new Error(`الكود لمرحلة ${codeData.stage} — هذه الحصة لمرحلة ${lesson.stage} ❌`);
     }
+
+    // Code already used (by anyone)
+    if (codeData.isUsed) {
+      throw new Error('الكود استُخدم بالفعل 🔒 — اشترِ كوداً جديداً');
+    }
+
+    // Mark code as used + record which lesson it opened
+    await updateDoc(codeDoc.ref, {
+      isUsed:true, usedBy:studentId,
+      usedAt:serverTimestamp(), lessonId
+    });
+
+    // Grant access to this lesson only
+    const list = lesson.accessList||[];
+    await updateDoc(doc(db,'lessons',lessonId), {
+      accessList:[...list,studentId]
+    });
     return lesson;
   },
 };
@@ -1084,21 +1137,35 @@ window.renderLessons=async function(){
   const lessons=await LessonService.getLessonsForGroup(currentUser.groupId);
   if(!lessons.length){document.getElementById('lessons-grid').innerHTML='<div class="empty-state" style="grid-column:1/-1"><div class="icon">🎬</div><div class="msg">لا توجد حصص بعد</div></div>';return}
   document.getElementById('lessons-grid').innerHTML=lessons.map(l=>{
-    const hasAccess=LessonService.hasAccess(l,currentUser.uid);
+    const hasAccess = LessonService.hasAccess(l, currentUser.uid);
+    const aType     = l.accessType || (l.code ? 'custom_codes' : 'free');
+    const isFree    = aType === 'free';
+    const isSystem  = aType === 'code_system';
+
+    let statusBadge, actionBtn;
+    if (hasAccess) {
+      statusBadge = '<span class="badge badge-green">✅ متاح</span>';
+      actionBtn   = `<button class="btn btn-success btn-sm" onclick="watchLesson('${l.id}')">▶️ شاهد</button>`;
+    } else if (isFree) {
+      statusBadge = '<span class="badge badge-cyan">🔓 مجاني</span>';
+      actionBtn   = `<button class="btn btn-success btn-sm" onclick="watchLessonFree('${l.id}')">▶️ شاهد</button>`;
+    } else if (isSystem) {
+      statusBadge = '<span class="badge badge-blue">🎫 يحتاج كود</span>';
+      actionBtn   = `<button class="btn btn-ghost btn-sm" onclick="openCodeEntry('${l.id}','${l.title.replace(/'/g,'')}','code_system','${l.stage||''}')">🎫 أدخل كود المرحلة</button>`;
+    } else {
+      const codeUsed = l.codeUsed && !hasAccess;
+      statusBadge = `<span class="badge ${codeUsed?'badge-red':'badge-muted'}">${codeUsed?'🔒 الكود استُخدم':'🔑 يحتاج كود'}</span>`;
+      actionBtn   = codeUsed
+        ? `<span style="font-size:11px;color:var(--red)">الكود استُخدم بالفعل</span>`
+        : `<button class="btn btn-ghost btn-sm" onclick="openCodeEntry('${l.id}','${l.title.replace(/'/g,'')}','custom_codes','')">🔑 أدخل الكود</button>`;
+    }
+
     return`<div class="lesson-card-s">
-      <div class="lesson-cover">🎬${!hasAccess?'<div class="lesson-lock">🔒</div>':''}</div>
+      <div class="lesson-cover">🎬${(!hasAccess&&!isFree)?'<div class="lesson-lock">🔒</div>':''}</div>
       <div class="lesson-body">
         <div class="lesson-title-s">${l.title}</div>
         <div class="lesson-meta-s">${l.date?`<span>📅 ${l.date}</span>`:''} ${l.description?`<span>${l.description.slice(0,35)}${l.description.length>35?'...':''}</span>`:''}</div>
-        <div class="lesson-footer">
-          <span class="badge ${hasAccess?'badge-green':l.requireCode===false?'badge-cyan':'badge-muted'}">${hasAccess?'✅ متاح':l.requireCode===false?'🔓 مفتوح':'🔒 مقفول'}</span>
-          ${hasAccess?
-            `<button class="btn btn-success btn-sm" onclick="watchLesson('${l.id}')">▶️ شاهد</button>`:
-            l.requireCode===false?
-            `<button class="btn btn-success btn-sm" onclick="watchLessonFree('${l.id}')">▶️ شاهد مباشرة</button>`:
-            `<button class="btn btn-ghost btn-sm" onclick="openCodeEntry('${l.id}','${l.title.replace(/'/g,'')}')">🔑 أدخل الكود</button>`
-          }
-        </div>
+        <div class="lesson-footer">${statusBadge}${actionBtn}</div>
       </div>
     </div>`;
   }).join('');
@@ -1109,7 +1176,7 @@ window.watchLesson=async function(lessonId){
   openWatchModal({id:snap.id,...snap.data()});
 };
 
-window.openCodeEntry=function(lessonId,title){
+window.openCodeEntry=function(lessonId,title,accessType,stage){
   document.getElementById('watch-title').textContent=`🔑 أدخل كود الحصة`;
   document.getElementById('watch-body').innerHTML=`
     <div style="font-size:14px;font-weight:700;color:var(--ink);margin-bottom:6px">${title}</div>
@@ -1117,23 +1184,46 @@ window.openCodeEntry=function(lessonId,title){
     <div class="code-wrap">
       <div class="code-row">
         <input id="lesson-code-input" class="code-input" maxlength="8" placeholder="Xx2Yy3Zw" autocomplete="off" style="letter-spacing:.12em">
-        <button class="btn btn-primary" id="code-submit-btn" onclick="submitLessonCode('${lessonId}')">🔓 فتح</button>
+        <button class="btn btn-primary" id="code-submit-btn" onclick="submitLessonCode('${lessonId}', '${accessType||\"custom_codes\"}')">🔓 فتح</button>
       </div>
       <div id="code-error" style="margin-top:10px;font-size:12px;color:var(--red)"></div>
     </div>
-    <div style="margin-top:14px" class="info-note">💡 الكود يُستخدم مرة واحدة فقط — بعد إدخاله ستتمكن من مشاهدة الحصة في أي وقت.</div>`;
+    <div style="margin-top:14px" class="info-note" id="code-hint-box">💡 الكود يُستخدم مرة واحدة فقط — بعد إدخاله ستتمكن من مشاهدة الحصة في أي وقت.</div>
+    <script>
+      (function(){
+        const at='${accessType||""}', hint=document.getElementById('code-hint-box');
+        if(hint&&at==='code_system') hint.textContent='🎫 أدخل أي كود غير مستخدم من اشتريته — الكود يفتح هذه الحصة ويُحفظ باسمك';
+      })();
+    </script>`;
   openModal('watch-modal');
   setTimeout(()=>document.getElementById('lesson-code-input')?.focus(),200);
   // Enter key support for code input
   setTimeout(()=>{const inp=document.getElementById('lesson-code-input');if(inp){inp.addEventListener('keydown',e=>{if(e.key==='Enter')window.submitLessonCode(lessonId)})}},250);
 };
 
-window.submitLessonCode=async function(lessonId){
-  const code=document.getElementById('lesson-code-input')?.value.trim();const errEl=document.getElementById('code-error');const btn=document.getElementById('code-submit-btn');
-  if(!code||code.length<6){if(errEl)errEl.textContent='أدخل الكود كاملاً (6 أحرف)';return}
-  if(btn){btn.disabled=true;btn.textContent='جار التحقق...'}if(errEl)errEl.textContent='';
-  try{const lesson=await LessonService.useCode(lessonId,currentUser.uid,code);Utils.toast('تم فتح الحصة ✅','success');openWatchModal(lesson);renderLessons()}
-  catch(e){if(errEl)errEl.textContent=e.message;if(btn){btn.disabled=false;btn.textContent='🔓 فتح'}}
+window.submitLessonCode=async function(lessonId, accessType){
+  const code  = document.getElementById('lesson-code-input')?.value.trim();
+  const errEl = document.getElementById('code-error');
+  const btn   = document.getElementById('code-submit-btn');
+  if(!code||code.length<6){if(errEl)errEl.textContent='أدخل الكود كاملاً';return}
+  if(btn){btn.disabled=true;btn.textContent='جار التحقق...'}
+  if(errEl)errEl.textContent='';
+  try{
+    let lesson;
+    if(accessType==='code_system'){
+      // Validate against global codes collection
+      lesson = await LessonService.useCodeSystem(lessonId, currentUser.uid, code);
+    } else {
+      // Custom code (one-time per lesson)
+      lesson = await LessonService.useCode(lessonId, currentUser.uid, code);
+    }
+    Utils.toast('تم فتح الحصة ✅','success');
+    openWatchModal(lesson);
+    renderLessons();
+  } catch(e){
+    if(errEl)errEl.textContent=e.message;
+    if(btn){btn.disabled=false;btn.textContent='🔓 فتح'}
+  }
 };
 
 function openWatchModal(lesson){
@@ -1223,6 +1313,19 @@ window.changePass=async function(){
     Utils.toast(msgs[e.code]||'خطأ — حاول مرة أخرى','error');
   }
 };
+
+// ── Video Protection ──
+(function(){
+  document.addEventListener('contextmenu', e=>{
+    if(e.target.tagName==='VIDEO'||e.target.tagName==='IFRAME'||e.target.closest('#watch-modal'))
+      e.preventDefault();
+  });
+  document.addEventListener('keydown', e=>{
+    if(e.key==='F12'||(e.ctrlKey&&e.shiftKey&&['I','J','C'].includes(e.key))||(e.ctrlKey&&e.key==='U')){
+      e.preventDefault(); return false;
+    }
+  });
+})();
 
 window.addEventListener('online',()=>Utils.toast('عاد الاتصال ✅','success'));
 window.addEventListener('offline',()=>Utils.toast('انقطع الإنترنت ⚠️','warning'));
