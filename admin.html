@@ -1644,7 +1644,8 @@ window.addLesson=async function(){
   const title=document.getElementById('nl-title').value.trim(),desc=document.getElementById('nl-desc').value.trim(),groupId=document.getElementById('nl-group').value,url=document.getElementById('nl-url').value.trim(),date=document.getElementById('nl-date').value;
   if(!title||!groupId||!url){Utils.toast('العنوان والمجموعة والرابط مطلوبة','error');return}
   const btn=document.getElementById('add-lesson-btn');btn.disabled=true;btn.textContent='جار الإنشاء...';
-  try{const{id,code}=await LessonService.createLesson({title,description:desc,groupId,videoUrl:url,date:date||null,teacherId:currentUser.uid});// No notification to students — codes are privateUtils.toast(`تم إنشاء الحصة ✅  الكود: ${code}`,'success',7000);closeModal('add-lesson-modal');['nl-title','nl-desc','nl-url','nl-date'].forEach(i=>document.getElementById(i).value='');document.getElementById('nl-group').value='';loadLessons()}
+  try{const{id,code}=await LessonService.createLesson({title,description:desc,groupId,videoUrl:url,date:date||null,teacherId:currentUser.uid});// No notification to students — codes are private
+  Utils.toast(`تم إنشاء الحصة ✅  الكود: ${code}`,'success',7000);closeModal('add-lesson-modal');['nl-title','nl-desc','nl-url','nl-date'].forEach(i=>document.getElementById(i).value='');document.getElementById('nl-group').value='';loadLessons()}
   catch(e){Utils.toast(e.message,'error')}
   finally{btn.disabled=false;btn.textContent='🎬 إنشاء'}
 };
