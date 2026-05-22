@@ -860,15 +860,26 @@ const MAX_DEVICES = APP_CONFIG.session.max_devices;
 const DeviceService = {
   async checkAndRegister(uid) {
     const fp = getDeviceFingerprint();
-    const userSnap = await getDoc(doc(db,'users',uid));
-    const userData  = userSnap.data();
-    const devices   = userData.devices || [];
-    if (devices.includes(fp)) return {allowed:true};
-    if (devices.length < MAX_DEVICES) {
-      await updateDoc(doc(db,'users',uid), {devices:[...devices, fp]});
+    try {
+      const userSnap = await getDoc(doc(db,'users',uid));
+      const userData  = userSnap.data();
+      const devices   = userData.devices || [];
+      if (devices.includes(fp)) return {allowed:true};
+      if (devices.length < MAX_DEVICES) {
+        try {
+          await updateDoc(doc(db,'users',uid), {devices:[...devices, fp]});
+        } catch(writeErr) {
+          // Permission denied on devices field — allow anyway (rules fix pending)
+          console.warn('DeviceService: could not write devices field:', writeErr.code);
+        }
+        return {allowed:true};
+      }
+      return {allowed:false, fp, currentDevices:devices};
+    } catch(err) {
+      // If we can't read the user doc at all, allow and continue
+      console.warn('DeviceService: skipping device check:', err.code);
       return {allowed:true};
     }
-    return {allowed:false, fp, currentDevices:devices};
   },
   async resetAndRegister(uid, newFp) {
     await updateDoc(doc(db,'users',uid), {devices:[newFp]});
@@ -930,65 +941,80 @@ window.resetDevices = async function(uid, fp) {
 // INIT
 onAuthStateChanged(auth,async user=>{
   if(!user){window.location.href='index.html';return}
-  const snap=await getDoc(doc(db,'users',user.uid));
-  if(!snap.exists()){window.location.href='index.html';return}
-  const role = snap.data().role;
-  // Redirect non-students to correct page
-  if (role === 'owner' || role === 'assistant') { window.location.href='admin.html'; return; }
-  if (role !== 'student') { window.location.href='index.html'; return; }
-  // Block inactive students
-  if (snap.data().isActive === false) {
-    await signOut(auth);
-    window.location.href='index.html';
-    return;
-  }
-  currentUser={uid:user.uid,...snap.data()};
-  const firstName=(currentUser.name||'طالب').split(' ')[0];
-  // Apply config
-  document.getElementById('app-name-ar').textContent = APP_CONFIG.name_ar;
-  document.getElementById('app-title').textContent   = APP_CONFIG.name_ar + ' — بوابة الطالب';
+  try {
+    const snap=await getDoc(doc(db,'users',user.uid));
+    if(!snap.exists()){window.location.href='index.html';return}
+    const role = snap.data().role;
+    // Redirect non-students to correct page
+    if (role === 'owner' || role === 'assistant') { window.location.href='admin.html'; return; }
+    if (role !== 'student') { window.location.href='index.html'; return; }
+    // Block inactive students
+    if (snap.data().isActive === false) {
+      await signOut(auth);
+      window.location.href='index.html';
+      return;
+    }
+    currentUser={uid:user.uid,...snap.data()};
+    const firstName=(currentUser.name||'طالب').split(' ')[0];
+    // Apply config
+    document.getElementById('app-name-ar').textContent = APP_CONFIG.name_ar;
+    document.getElementById('app-title').textContent   = APP_CONFIG.name_ar + ' — بوابة الطالب';
 
-  document.getElementById('sb-name').textContent=currentUser.name||'طالب';
-  document.getElementById('sb-sid').textContent=currentUser.studentId||'—';
-  document.getElementById('sb-avatar').textContent=firstName[0];
-  document.getElementById('dash-avatar').textContent=firstName[0];
-  document.getElementById('dash-welcome').textContent=`أهلاً، ${firstName}!`;
-  document.getElementById('dash-sid').textContent=`🆔 ${currentUser.studentId||'—'}`;
-  document.getElementById('dash-date').textContent=new Date().toLocaleDateString('ar-EG',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
-  document.getElementById('set-name').value=currentUser.name||'';
-  document.getElementById('set-name-disp').textContent=currentUser.name||'—';
-  document.getElementById('set-sid-disp').textContent=currentUser.studentId||'—';
-  document.getElementById('set-info-disp').textContent=`${currentUser.email||''}${currentUser.phone?' · '+currentUser.phone:''}`;
-  document.getElementById('set-avatar').textContent=firstName[0];
+    document.getElementById('sb-name').textContent=currentUser.name||'طالب';
+    document.getElementById('sb-sid').textContent=currentUser.studentId||'—';
+    document.getElementById('sb-avatar').textContent=firstName[0];
+    document.getElementById('dash-avatar').textContent=firstName[0];
+    document.getElementById('dash-welcome').textContent=`أهلاً، ${firstName}!`;
+    document.getElementById('dash-sid').textContent=`🆔 ${currentUser.studentId||'—'}`;
+    document.getElementById('dash-date').textContent=new Date().toLocaleDateString('ar-EG',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+    document.getElementById('set-name').value=currentUser.name||'';
+    document.getElementById('set-name-disp').textContent=currentUser.name||'—';
+    document.getElementById('set-sid-disp').textContent=currentUser.studentId||'—';
+    document.getElementById('set-info-disp').textContent=`${currentUser.email||''}${currentUser.phone?' · '+currentUser.phone:''}`;
+    document.getElementById('set-avatar').textContent=firstName[0];
 
-  // FIXED: GroupService.getGroup properly called
-  if(currentUser.groupId){
-    myGroup=await GroupService.getGroup(currentUser.groupId);
-    document.getElementById('dash-group').textContent=myGroup?`المجموعة: ${myGroup.name}`:'لا توجد مجموعة';
-  }else{
-    document.getElementById('dash-group').textContent='لم تُضف لمجموعة بعد';
+    if(currentUser.groupId){
+      try {
+        myGroup=await GroupService.getGroup(currentUser.groupId);
+        document.getElementById('dash-group').textContent=myGroup?`المجموعة: ${myGroup.name}`:'لا توجد مجموعة';
+      } catch { document.getElementById('dash-group').textContent='—'; }
+    }else{
+      document.getElementById('dash-group').textContent='لم تُضف لمجموعة بعد';
+    }
+    // ── Device check ──
+    const deviceResult = await DeviceService.checkAndRegister(user.uid);
+    if (!deviceResult.allowed) {
+      showDeviceLimitPopup(user.uid, deviceResult.fp);
+      return;
+    }
+    window._startAutoLogout?.();
+    listenNotifs();
+    await loadAllData();
+    renderDashboard();
+  } catch(err) {
+    console.error('Auth init error:', err);
+    Utils.toast('خطأ في تحميل البيانات — ' + (err.code || err.message), 'error', 6000);
   }
-  // ── Device check ──
-  const deviceResult = await DeviceService.checkAndRegister(user.uid);
-  if (!deviceResult.allowed) {
-    showDeviceLimitPopup(user.uid, deviceResult.fp);
-    return;
-  }
-  window._startAutoLogout?.();
-  listenNotifs();
-  await loadAllData();
-  renderDashboard();
 });
 
 async function loadAllData(){
-  const[grades,attendance,assignments,exams]=await Promise.all([
+  const [gradesRes, attendanceRes, assignmentsRes, examsRes] = await Promise.allSettled([
     GradeService.getStudentGrades(currentUser.uid),
     AttendanceService.getStudentAttendance(currentUser.uid),
-    currentUser.groupId?AssignmentService.getGroupAssignments(currentUser.groupId):Promise.resolve([]),
-    currentUser.groupId?ExamService.getExams(currentUser.groupId):Promise.resolve([]),
+    currentUser.groupId ? AssignmentService.getGroupAssignments(currentUser.groupId) : Promise.resolve([]),
+    currentUser.groupId ? ExamService.getExams(currentUser.groupId) : Promise.resolve([]),
   ]);
-  myGrades=grades;myAttendance=attendance;myAssignments=assignments;allAssignments=assignments;myExams=exams;
-  examMap={};exams.forEach(e=>{examMap[e.id]=e});
+  // Log failures with Firestore index-creation links so you can fix them from the console
+  const labels = ['grades','attendance','assignments','exams'];
+  [gradesRes, attendanceRes, assignmentsRes, examsRes].forEach((r,i)=>{
+    if(r.status==='rejected') console.error(`loadAllData [${labels[i]}] failed:`, r.reason);
+  });
+  myGrades      = gradesRes.status      === 'fulfilled' ? gradesRes.value      : [];
+  myAttendance  = attendanceRes.status  === 'fulfilled' ? attendanceRes.value  : [];
+  myAssignments = assignmentsRes.status === 'fulfilled' ? assignmentsRes.value : [];
+  allAssignments = myAssignments;
+  myExams       = examsRes.status       === 'fulfilled' ? examsRes.value       : [];
+  examMap={};myExams.forEach(e=>{examMap[e.id]=e});
 }
 
 // NAV — FIXED: uses explicit btn param

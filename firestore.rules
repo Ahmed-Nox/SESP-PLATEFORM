@@ -6,56 +6,57 @@ service cloud.firestore {
     //  HELPER FUNCTIONS
     // ═══════════════════════════════════════════
 
-    // هل المستخدم مسجل دخول؟
     function isAuth() {
       return request.auth != null;
     }
 
-    // هل هو مدرس (owner) أو مساعد (assistant)؟
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // FIX: call getUserData() once — avoids double get() in isActiveStudent
     function isAdmin() {
-      let role = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+      let role = getUserData().role;
       return isAuth() && (role == 'admin' || role == 'owner' || role == 'assistant');
     }
 
-    // هل هو owner فقط؟
     function isOwnerRole() {
-      return isAuth() &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'owner';
+      return isAuth() && getUserData().role == 'owner';
     }
 
-    // هل هو الطالب صاحب الـ doc؟
     function isOwner(uid) {
       return isAuth() && request.auth.uid == uid;
     }
 
-    // هل هو طالب نشط؟
+    // FIX: single get() call — previous version called get() twice which could
+    // cause rule evaluation failures when isActive was missing or null.
     function isActiveStudent() {
-      return isAuth() &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'student' &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isActive == true;
+      let data = getUserData();
+      return isAuth() && data.role == 'student' && data.isActive == true;
     }
 
     // ═══════════════════════════════════════════
     //  USERS COLLECTION
     // ═══════════════════════════════════════════
     match /users/{userId} {
-      // القراءة: المدرس/المساعد يقرأ أي مستخدم — الطالب يقرأ بياناته فقط
-      allow read: if isAdmin() || isOwner(userId) ||
-        (isAuth() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'assistant');
+      allow read: if isAdmin() || isOwner(userId);
 
-      // الكتابة: المدرس يكتب أي مستخدم — الطالب يعدل بياناته فقط (اسم فقط)
       allow create: if isAdmin();
-      allow update: if isAdmin() || (isOwner(userId) && onlyUpdatingFields(['name', 'updatedAt']));
-      allow delete: if false; // لا حذف مباشر — نستخدم isActive: false
+
+      // FIX: added 'devices' to the allowed fields so DeviceService.checkAndRegister()
+      // can write fingerprints without a permission error crashing the auth flow.
+      allow update: if isAdmin() || (
+        isOwner(userId) && onlyUpdatingFields(['name', 'updatedAt', 'devices'])
+      );
+
+      allow delete: if false;
     }
 
     // ═══════════════════════════════════════════
     //  GROUPS COLLECTION
     // ═══════════════════════════════════════════
     match /groups/{groupId} {
-      // الطلاب يقرأون المجموعات (عشان يشوفوا اسم مجموعتهم)
-      allow read: if isAuth();
-      // الكتابة للمدرس فقط
+      allow read:  if isAuth();
       allow write: if isAdmin();
     }
 
@@ -63,10 +64,8 @@ service cloud.firestore {
     //  ATTENDANCE COLLECTION
     // ═══════════════════════════════════════════
     match /attendance/{recordId} {
-      // الطالب يقرأ سجلات حضوره فقط — المدرس يقرأ الكل
       allow read: if isAdmin() ||
         (isActiveStudent() && resource.data.studentId == request.auth.uid);
-      // الكتابة للمدرس فقط
       allow write: if isAdmin();
     }
 
@@ -74,10 +73,8 @@ service cloud.firestore {
     //  GRADES COLLECTION
     // ═══════════════════════════════════════════
     match /grades/{gradeId} {
-      // الطالب يقرأ درجاته فقط — المدرس يقرأ الكل
       allow read: if isAdmin() ||
         (isActiveStudent() && resource.data.studentId == request.auth.uid);
-      // الكتابة للمدرس فقط
       allow write: if isAdmin();
     }
 
@@ -85,9 +82,7 @@ service cloud.firestore {
     //  EXAMS COLLECTION
     // ═══════════════════════════════════════════
     match /exams/{examId} {
-      // الطلاب يقرأون الامتحانات (عشان يشوفوا المواعيد)
-      allow read: if isAuth();
-      // الكتابة للمدرس فقط
+      allow read:  if isAuth();
       allow write: if isAdmin();
     }
 
@@ -95,9 +90,7 @@ service cloud.firestore {
     //  ASSIGNMENTS COLLECTION
     // ═══════════════════════════════════════════
     match /assignments/{assignId} {
-      // الطلاب يقرأون الواجبات
-      allow read: if isAuth();
-      // المدرس يكتب — الطالب يعدل submissions فقط (لتسليم الواجب)
+      allow read:   if isAuth();
       allow create: if isAdmin();
       allow update: if isAdmin() || (isActiveStudent() && onlyUpdatingSubmissions());
       allow delete: if isAdmin();
@@ -107,10 +100,8 @@ service cloud.firestore {
     //  NOTIFICATIONS COLLECTION
     // ═══════════════════════════════════════════
     match /notifications/{notifId} {
-      // الطالب يقرأ إشعاراته فقط — المدرس يقرأ الكل
       allow read: if isAdmin() ||
         (isAuth() && resource.data.toUid == request.auth.uid);
-      // المدرس يرسل — الطالب يعدل isRead فقط
       allow create: if isAdmin();
       allow update: if isAdmin() ||
         (isAuth() && resource.data.toUid == request.auth.uid && onlyUpdatingFields(['isRead']));
@@ -121,12 +112,9 @@ service cloud.firestore {
     //  LESSONS COLLECTION
     // ═══════════════════════════════════════════
     match /lessons/{lessonId} {
-      // الطلاب يقرأون الحصص (عشان يشوفوا القائمة)
-      allow read: if isAuth();
-      // المدرس يكتب
+      allow read:   if isAuth();
       allow create: if isAdmin();
       allow delete: if isAdmin();
-      // التعديل: المدرس يعدل أي حاجة — الطالب يعدل accessList فقط (عند استخدام الكود)
       allow update: if isAdmin() ||
         (isActiveStudent() && onlyUpdatingLessonAccess());
     }
@@ -135,38 +123,30 @@ service cloud.firestore {
     //  ANALYTICS COLLECTION
     // ═══════════════════════════════════════════
     match /analytics/{groupId} {
-      // الطلاب يقرأون تحليلات مجموعتهم فقط — المدرس يقرأ الكل
       allow read: if isAdmin() ||
         (isActiveStudent() &&
-          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.groupId == groupId);
-      // الكتابة للمدرس فقط (أو client-side analytics update)
+          getUserData().groupId == groupId);
       allow write: if isAdmin();
     }
-
 
     // ═══════════════════════════════════════════
     //  PERMISSION REQUESTS COLLECTION
     // ═══════════════════════════════════════════
     match /permission_requests/{reqId} {
-      // Assistant يرسل طلب — Owner يقرأ طلباته
       allow create: if isAuth() && request.resource.data.fromUid == request.auth.uid;
       allow read:   if isAdmin() ||
         (isAuth() && (resource.data.fromUid == request.auth.uid || resource.data.toUid == request.auth.uid));
-      allow update: if isAdmin(); // Owner يقبل أو يرفض
+      allow update: if isAdmin();
       allow delete: if isAdmin();
     }
 
-
-
     // ═══════════════════════════════════════════
-    //  CODES COLLECTION (Global stage-based codes)
+    //  CODES COLLECTION (global stage-based codes)
     // ═══════════════════════════════════════════
     match /codes/{codeId} {
-      // Students can read to validate — admin writes
       allow read:   if isAuth();
       allow create: if isAdmin();
       allow delete: if isAdmin();
-      // Student marks code as used
       allow update: if isAdmin() ||
         (isActiveStudent() && onlyUpdatingFields(['isUsed','usedBy','usedAt','lessonId']));
     }
@@ -175,10 +155,8 @@ service cloud.firestore {
     //  LESSON CODES COLLECTION
     // ═══════════════════════════════════════════
     match /lesson_codes/{codeId} {
-      // Admin يقرأ ويكتب — الطالب يقرأ فقط للتحقق
       allow read:   if isAuth();
       allow create: if isAdmin();
-      // الطالب يقدر يعدل usedBy/isUsed/usedAt فقط
       allow update: if isAdmin() ||
         (isActiveStudent() && onlyUpdatingFields(['isUsed','usedBy','usedAt','lessonId']));
       allow delete: if isAdmin();
@@ -188,19 +166,15 @@ service cloud.firestore {
     //  HELPER RULE FUNCTIONS
     // ═══════════════════════════════════════════
 
-    // التحقق إن الطالب بيعدل حقول معينة فقط
     function onlyUpdatingFields(fields) {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields);
     }
 
-    // التحقق إن الطالب بيعدل submissions فقط
     function onlyUpdatingSubmissions() {
       let changedKeys = request.resource.data.diff(resource.data).affectedKeys();
-      return changedKeys.size() == 1 &&
-        changedKeys.hasAll(['submissions']);
+      return changedKeys.size() == 1 && changedKeys.hasAll(['submissions']);
     }
 
-    // التحقق إن الطالب بيعدل accessList و codeUsed فقط
     function onlyUpdatingLessonAccess() {
       let changedKeys = request.resource.data.diff(resource.data).affectedKeys();
       return changedKeys.hasOnly(['accessList', 'codeUsed']);
